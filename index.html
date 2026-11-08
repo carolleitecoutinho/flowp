@@ -84,13 +84,14 @@
         <span class="text-[19px] font-extrabold tracking-tight text-fp-ink">flow<span class="text-fp-green">.</span><span class="text-grad-brand">pbr</span></span>
       </a>
       <nav class="hidden md:flex items-center gap-8 text-[14px] text-fp-graphite font-medium">
+        <a href="#simulador" class="hover:text-fp-ink transition">Simular plano</a>
         <a href="#catalogo-ao-vivo" class="hover:text-fp-ink transition">Módulos e preços</a>
         <a href="#case" class="hover:text-fp-ink transition">Caso real</a>
         <a href="#faq" class="hover:text-fp-ink transition">Dúvidas</a>
       </nav>
       <div class="flex items-center gap-3">
         <a href="https://app.flowpbr.com" class="text-[13px] md:text-[14px] font-semibold text-fp-graphite hover:text-fp-ink transition">Entrar</a>
-        <a href="#catalogo-ao-vivo" class="btn-primary !py-2.5 !px-4 md:!px-5 !text-[13px] md:!text-[14px]">Testar grátis</a>
+        <a href="#simulador" class="btn-primary !py-2.5 !px-4 md:!px-5 !text-[13px] md:!text-[14px]">Testar grátis</a>
       </div>
     </div>
   </header>
@@ -137,6 +138,68 @@
       <div class="eyebrow text-fp-green-dark mb-3" data-landing="dores.eyebrow">Comece pelo que dói</div>
       <h2 class="h2" data-landing="dores.titulo">Qual é a sua dor hoje?</h2>
       <div id="dores-chips" class="mt-8 flex flex-wrap justify-center gap-3"></div>
+    </div>
+  </section>
+
+  <!-- Simulador de plano (Carol nov/08): monta o plano e já testa com tudo marcado -->
+  <section id="simulador" class="bg-white border-t border-fp-border" style="scroll-margin-top: 70px">
+    <div class="max-w-6xl mx-auto px-4 lg:px-8 py-16 lg:py-20">
+      <div class="max-w-2xl mb-8">
+        <div class="eyebrow text-fp-green-dark mb-3">Simule agora</div>
+        <h2 class="h2">Monte o seu plano <span class="text-grad-brand">em 1 minuto.</span></h2>
+        <p class="mt-4 text-fp-graphite text-lg">Escolha o que sua empresa precisa, veja o preço na hora e teste grátis com tudo já configurado.</p>
+      </div>
+      <div class="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+        <div class="min-w-0 space-y-4">
+          <div class="min-w-0 rounded-2xl border border-fp-border bg-fp-bg p-4 sm:p-5">
+            <div class="flex items-center justify-between gap-3 mb-3">
+              <div><div class="text-[15px] font-bold text-fp-ink">1. O que você precisa</div><div id="sim-sub" class="text-[13px] text-fp-mute">Marque os módulos de cada setor.</div></div>
+              <button type="button" id="sim-limpar" class="hidden text-[13px] font-semibold text-fp-mute hover:text-fp-ink">Limpar</button>
+            </div>
+            <div id="sim-setores" class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-2" style="scrollbar-width:none"></div>
+            <div id="sim-modulos" class="space-y-4"><div class="py-8 text-center text-sm text-fp-mute">Carregando módulos…</div></div>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="rounded-2xl border border-fp-border bg-fp-bg p-4 sm:p-5">
+              <div class="text-[15px] font-bold text-fp-ink mb-3">2. Quantas pessoas vão usar</div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-[14px] font-semibold text-fp-graphite">Usuários</span>
+                <div class="flex items-center gap-1.5">
+                  <button type="button" id="sim-menos" aria-label="Menos usuários" class="h-10 w-10 rounded-lg border border-fp-border bg-white text-lg font-bold text-fp-ink hover:border-fp-green">−</button>
+                  <input id="sim-usuarios" inputmode="numeric" aria-label="Usuários" value="3" class="h-10 w-16 rounded-lg border border-fp-border bg-white text-center text-[15px] font-bold text-fp-ink outline-none focus:border-fp-green" />
+                  <button type="button" id="sim-mais" aria-label="Mais usuários" class="h-10 w-10 rounded-lg border border-fp-border bg-white text-lg font-bold text-fp-ink hover:border-fp-green">+</button>
+                </div>
+              </div>
+            </div>
+            <label class="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-fp-border bg-fp-bg p-4 sm:p-5">
+              <span><span class="block text-[15px] font-bold text-fp-ink">3. Plano anual</span><span class="block text-[13px] text-fp-mute">Paga 10 meses, leva 12</span></span>
+              <input type="checkbox" id="sim-anual" class="h-5 w-5 accent-[#16A34A]" />
+            </label>
+          </div>
+        </div>
+        <aside id="sim-resumo" class="min-w-0 lg:sticky lg:top-[84px] rounded-2xl border border-fp-border bg-white shadow-sm overflow-hidden" style="scroll-margin-top: 80px">
+          <div class="bg-grad-dark px-5 py-4 text-white">
+            <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/60">Seu plano</div>
+            <div id="sim-titulo" class="text-[17px] font-bold">Escolha seus módulos</div>
+          </div>
+          <div class="p-5 space-y-4">
+            <div id="sim-linhas" class="space-y-1.5 text-[14px]"></div>
+            <div class="rounded-xl bg-fp-bg px-4 py-3">
+              <div class="flex items-baseline justify-between gap-3"><span class="text-[13px] font-semibold text-fp-mute">Por mês</span><b id="sim-total" class="text-[30px] font-extrabold leading-none tracking-tight text-fp-ink tabular-nums">R$ 0</b></div>
+              <div id="sim-anual-linha" class="hidden mt-2 border-t border-fp-border pt-2 flex items-baseline justify-between gap-3"><span class="text-[12.5px] text-fp-mute">Anual à vista · 2 meses grátis</span><b id="sim-total-anual" class="text-[15px] text-fp-ink tabular-nums"></b></div>
+            </div>
+            <button type="button" id="sim-testar" disabled class="btn-primary w-full justify-center disabled:opacity-50 disabled:pointer-events-none">Testar agora</button>
+            <p class="text-center text-[12px] text-fp-mute">14 dias grátis. Sem cartão pra começar. Cancele quando quiser.</p>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <!-- Celular: total sempre à vista -->
+    <div id="sim-barra" class="lg:hidden fixed inset-x-0 bottom-0 z-40 hidden border-t border-fp-border bg-white/95 backdrop-blur px-4 pt-2.5" style="padding-bottom: calc(env(safe-area-inset-bottom) + 10px)">
+      <div class="flex items-center justify-between gap-3">
+        <div class="min-w-0"><div id="sim-barra-sub" class="text-[12px] text-fp-mute"></div><div id="sim-barra-total" class="text-[20px] font-extrabold leading-tight text-fp-ink tabular-nums"></div></div>
+        <button type="button" id="sim-barra-btn" class="btn-primary !py-2.5 !px-4 !text-[14px]">Testar agora</button>
+      </div>
     </div>
   </section>
 
@@ -601,6 +664,120 @@
       aplicarWhatsapp();
     }
 
+
+    // ─── Simulador de plano (Carol nov/08) ───
+    // Mesma conta do app (src/lib/plataforma/regua-cobranca.ts + plano-personalizado.ts).
+    const ORDEM_SETORES = ["Vendas e CRM", "Atendimento", "Marketing", "Tarefas e organização", "Financeiro", "Operação", "Qualidade e manutenção", "RH", "Condomínio", "Plataforma"];
+    const sim = { sel: [], setor: "todos", usuarios: 3, anual: false };
+    const precoBase = (m) => (m.precoMensalPromocional > 0 ? m.precoMensalPromocional : (m.precoMensalSugerido || 0));
+    function precoRegua(base, r, q) {
+      if (!r || r.metrica === "nada" || r.metrica === "cnpj") return base;
+      let valor = base;
+      if (r.forma === "percentual") {
+        valor += (Math.max(0, q - r.incluidos) * base * (r.percentual || 0)) / 100;
+      } else {
+        let ref = r.incluidos;
+        if (r.forma === "faixas") for (const f of r.faixas || []) if (q > ref) { valor = f.preco; ref = f.ate; }
+        if (q > ref && r.valorUnidade > 0) valor += Math.ceil((q - ref) / Math.max(1, r.aCada || 1)) * r.valorUnidade;
+      }
+      if (r.teto != null && valor > r.teto) valor = r.teto;
+      return Math.round(valor * 100) / 100;
+    }
+    function calcSim() {
+      const escolhidos = sim.sel.map((s) => estado.modulos.find((m) => m.slug === s)).filter(Boolean);
+      const linhas = escolhidos.map((m) => {
+        const r = m.regua;
+        let v = precoBase(m), det = "";
+        if (r && r.metrica === "usuario") {
+          if (r.usuarioIlimitadoComOutroModulo && escolhidos.length > 1) det = " (usuários ilimitados)";
+          else { v = precoRegua(precoBase(m), r, sim.usuarios); det = ` (${sim.usuarios} usuário${sim.usuarios > 1 ? "s" : ""})`; }
+        } else if (r && r.metrica !== "nada" && r.metrica !== "cnpj") {
+          v = precoRegua(precoBase(m), r, r.incluidos);
+        }
+        return { texto: m.nome + det, valor: v };
+      });
+      const total = Math.round(linhas.reduce((t, l) => t + l.valor, 0) * 100) / 100;
+      return { escolhidos, linhas, total, anual: Math.round(total * 10 * 100) / 100 };
+    }
+    function urlTestar() {
+      const qs = new URLSearchParams({ modulos: sim.sel.join(","), usuarios: String(sim.usuarios) });
+      if (sim.anual) qs.set("anual", "1");
+      return `${APP_BASE}/cadastro?${qs.toString()}`;
+    }
+    function renderSimulador() {
+      const mods = estado.modulos;
+      const box = document.getElementById("sim-modulos");
+      if (!mods.length) { box.innerHTML = '<div class="py-8 text-center text-sm text-fp-mute">Não deu pra carregar os módulos agora. Recarregue a página.</div>'; return; }
+      const setores = Array.from(new Set(mods.map((m) => m.grupo || "Outros"))).sort((a, b) => {
+        const ia = ORDEM_SETORES.indexOf(a), ib = ORDEM_SETORES.indexOf(b);
+        return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
+      });
+      const qtdNo = (g) => sim.sel.filter((s) => (mods.find((m) => m.slug === s)?.grupo || "Outros") === g || g === "todos").length;
+      document.getElementById("sim-setores").innerHTML = ["todos", ...setores].map((g) => {
+        const on = sim.setor === g, n = qtdNo(g);
+        return `<button type="button" data-setor="${esc(g)}" aria-pressed="${on}" class="shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${on ? "border-fp-green-dark bg-fp-green-dark text-white" : "border-fp-border bg-white text-fp-ink hover:border-fp-green"}">${g === "todos" ? "Todos" : esc(g)}${n ? ` <span class="${on ? "text-white/80" : "text-fp-green-dark"}">${n}</span>` : ""}</button>`;
+      }).join("");
+      const grupos = sim.setor === "todos" ? setores : [sim.setor];
+      box.innerHTML = grupos.map((g) => `
+        <div>
+          ${sim.setor === "todos" ? `<div class="mb-2 text-[11.5px] font-bold uppercase tracking-[0.08em] text-fp-mute">${esc(g)}</div>` : ""}
+          <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            ${mods.filter((m) => (m.grupo || "Outros") === g).map((m) => {
+              const on = sim.sel.includes(m.slug);
+              return `<label class="flex min-h-[60px] cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 transition ${on ? "border-fp-green-dark bg-fp-green-soft" : "border-fp-border bg-white hover:border-fp-green"}">
+                <input type="checkbox" data-mod="${esc(m.slug)}" ${on ? "checked" : ""} class="sr-only" />
+                <span aria-hidden="true" class="mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border text-white text-[12px] font-bold ${on ? "border-fp-green-dark bg-fp-green-dark" : "border-fp-border bg-white"}">${on ? "✓" : ""}</span>
+                <span class="min-w-0"><span class="block text-[14px] font-semibold leading-snug text-fp-ink">${esc(m.nome)}</span><span class="block text-[12.5px] text-fp-mute tabular-nums">a partir de ${fmtMoeda(precoBase(m))}/mês</span></span>
+              </label>`;
+            }).join("")}
+          </div>
+        </div>`).join("");
+      atualizarResumo();
+    }
+    function atualizarResumo() {
+      const c = calcSim(), n = c.escolhidos.length;
+      document.getElementById("sim-sub").textContent = n ? `${n} ${n === 1 ? "módulo escolhido" : "módulos escolhidos"}` : "Marque os módulos de cada setor.";
+      document.getElementById("sim-limpar").classList.toggle("hidden", !n);
+      document.getElementById("sim-titulo").textContent = n ? "Quanto fica pra você" : "Escolha seus módulos";
+      document.getElementById("sim-linhas").innerHTML = n
+        ? c.linhas.map((l) => `<div class="flex justify-between gap-3"><span class="min-w-0 text-fp-graphite">${esc(l.texto)}</span><span class="shrink-0 text-fp-ink tabular-nums">${fmtMoeda(l.valor)}</span></div>`).join("")
+        : '<div class="rounded-xl border border-dashed border-fp-border px-3 py-5 text-center text-fp-mute">Marque os módulos e o preço aparece aqui.</div>';
+      document.getElementById("sim-total").textContent = fmtMoeda(c.total);
+      document.getElementById("sim-anual-linha").classList.toggle("hidden", !sim.anual);
+      document.getElementById("sim-total-anual").textContent = fmtMoeda(c.anual);
+      document.getElementById("sim-testar").disabled = !n;
+      document.getElementById("sim-barra-sub").textContent = n ? `${n} ${n === 1 ? "módulo" : "módulos"} · ${sim.usuarios} usuário${sim.usuarios > 1 ? "s" : ""} · por mês` : "Nenhum módulo";
+      document.getElementById("sim-barra-total").textContent = fmtMoeda(c.total);
+      document.getElementById("sim-barra-btn").textContent = n ? "Testar agora" : "Montar plano";
+    }
+    function setUsuarios(v) {
+      sim.usuarios = Math.max(1, Math.min(500, Math.floor(Number(v) || 1)));
+      document.getElementById("sim-usuarios").value = sim.usuarios;
+      atualizarResumo();
+    }
+    document.getElementById("sim-setores").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-setor]"); if (!b) return;
+      sim.setor = b.dataset.setor; renderSimulador();
+    });
+    document.getElementById("sim-modulos").addEventListener("change", (e) => {
+      const s = e.target.dataset.mod; if (!s) return;
+      sim.sel = sim.sel.includes(s) ? sim.sel.filter((x) => x !== s) : [...sim.sel, s];
+      renderSimulador();
+    });
+    document.getElementById("sim-limpar").addEventListener("click", () => { sim.sel = []; renderSimulador(); });
+    document.getElementById("sim-menos").addEventListener("click", () => setUsuarios(sim.usuarios - 1));
+    document.getElementById("sim-mais").addEventListener("click", () => setUsuarios(sim.usuarios + 1));
+    document.getElementById("sim-usuarios").addEventListener("input", (e) => setUsuarios(e.target.value.replace(/\D/g, "")));
+    document.getElementById("sim-anual").addEventListener("change", (e) => { sim.anual = e.target.checked; atualizarResumo(); });
+    document.getElementById("sim-testar").addEventListener("click", () => { if (sim.sel.length) location.href = urlTestar(); });
+    document.getElementById("sim-barra-btn").addEventListener("click", () => {
+      if (sim.sel.length) location.href = urlTestar();
+      else document.getElementById("simulador").scrollIntoView({ behavior: "smooth" });
+    });
+    // Barra do celular só aparece enquanto o simulador está na tela.
+    new IntersectionObserver(([en]) => document.getElementById("sim-barra").classList.toggle("hidden", !en.isIntersecting))
+      .observe(document.getElementById("simulador"));
+
     // ─── Carga ───
     async function puxar(rota) {
       try { const r = await fetch(API + rota); if (!r.ok) throw 0; return await r.json(); }
@@ -616,6 +793,7 @@
       renderPlataforma();
       renderLanding();
       renderCatalogo();
+      renderSimulador();
       aplicarWhatsapp();
     })();
   </script>
