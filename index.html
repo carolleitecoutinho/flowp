@@ -177,13 +177,32 @@
             </label>
           </div>
         </div>
-        <aside id="sim-resumo" class="min-w-0 lg:sticky lg:top-[84px] rounded-2xl border border-fp-border bg-white shadow-sm overflow-hidden" style="scroll-margin-top: 80px">
-          <div class="bg-grad-dark px-5 py-4 text-white">
+        <aside id="sim-resumo" class="min-w-0 lg:sticky lg:top-[84px] rounded-2xl border border-fp-border bg-white shadow-sm" style="scroll-margin-top: 80px">
+          <div class="bg-grad-dark rounded-t-2xl px-5 py-4 text-white">
             <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/60">Seu plano</div>
             <div id="sim-titulo" class="text-[17px] font-bold">Escolha seus módulos</div>
           </div>
           <div class="p-5 space-y-4">
             <div id="sim-linhas" class="space-y-1.5 text-[14px]"></div>
+            <div id="sim-inclui" class="hidden rounded-xl border border-fp-border px-4 py-3 space-y-2 text-[14px]">
+              <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-fp-mute">O plano inclui</div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="flex items-center gap-1.5 text-fp-graphite">Usuários
+                  <details class="sim-info relative"><summary aria-label="Como contam os usuários" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary>
+                    <div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] leading-snug text-fp-graphite shadow-lg">Os usuários <b>não somam</b>: vale o módulo que dá mais usuários. Ex.: um módulo com 3 e outro com 5 = até 5 pessoas. Passou disso, cada pessoa a mais é cobrada à parte (ou em pacote, se sair mais barato).</div>
+                  </details>
+                </span>
+                <b id="sim-inc-usuarios" class="text-fp-ink tabular-nums"></b>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="flex items-center gap-1.5 text-fp-graphite">Créditos de IA por mês
+                  <details class="sim-info relative"><summary aria-label="Como funcionam os créditos" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary>
+                    <div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] leading-snug text-fp-graphite shadow-lg">Os créditos <b>somam</b>: cada módulo traz os seus e o total vira a franquia do mês. Eles pagam o uso da IA (agentes, resumos, sugestões). Renovam todo mês.</div>
+                  </details>
+                </span>
+                <b id="sim-inc-creditos" class="text-fp-ink tabular-nums"></b>
+              </div>
+            </div>
             <div class="rounded-xl bg-fp-bg px-4 py-3">
               <div class="flex items-baseline justify-between gap-3"><span class="text-[13px] font-semibold text-fp-mute">Por mês</span><b id="sim-total" class="text-[30px] font-extrabold leading-none tracking-tight text-fp-ink tabular-nums">R$ 0</b></div>
               <div id="sim-anual-linha" class="hidden mt-2 border-t border-fp-border pt-2 flex items-baseline justify-between gap-3"><span class="text-[12.5px] text-fp-mute">Anual à vista · 2 meses grátis</span><b id="sim-total-anual" class="text-[15px] text-fp-ink tabular-nums"></b></div>
@@ -683,12 +702,24 @@
       if (r.teto != null && valor > r.teto) valor = r.teto;
       return Math.round(valor * 100) / 100;
     }
+    function custoExtras(n, r) {
+      if (!r || n <= 0) return 0;
+      let melhor = n * r.precoAvulso;
+      for (let p = 1; p <= Math.ceil(n / r.pacoteQtd); p++) {
+        const v = p * r.pacotePreco + Math.max(0, n - p * r.pacoteQtd) * r.precoAvulso;
+        if (v < melhor) melhor = v;
+      }
+      return Math.round(melhor * 100) / 100;
+    }
     function calcSim() {
       const escolhidos = sim.sel.map((s) => estado.modulos.find((m) => m.slug === s)).filter(Boolean);
+      const regras = estado.regrasUsuarios;
+      let porReguaUsuario = false;
       const linhas = escolhidos.map((m) => {
         const r = m.regua;
         let v = precoBase(m), det = "";
         if (r && r.metrica === "usuario") {
+          porReguaUsuario = true;
           if (r.usuarioIlimitadoComOutroModulo && escolhidos.length > 1) det = " (usuários ilimitados)";
           else { v = precoRegua(precoBase(m), r, sim.usuarios); det = ` (${sim.usuarios} usuário${sim.usuarios > 1 ? "s" : ""})`; }
         } else if (r && r.metrica !== "nada" && r.metrica !== "cnpj") {
@@ -696,8 +727,14 @@
         }
         return { texto: m.nome + det, valor: v };
       });
+      // Usuários: vale o MAIOR entre os módulos (não soma). Créditos: SOMAM.
+      const padrao = regras?.inclusosPadrao ?? 3;
+      const inclusos = escolhidos.length ? Math.max(...escolhidos.map((m) => (typeof m.usuariosInclusos === "number" ? m.usuariosInclusos : padrao))) : 0;
+      const creditos = escolhidos.reduce((t, m) => t + (m.creditosIAInclusos || 0), 0);
+      const extras = escolhidos.length && !porReguaUsuario ? Math.max(0, sim.usuarios - inclusos) : 0;
+      if (extras > 0 && regras) linhas.push({ texto: `${extras} usuário${extras > 1 ? "s" : ""} a mais`, valor: custoExtras(extras, regras) });
       const total = Math.round(linhas.reduce((t, l) => t + l.valor, 0) * 100) / 100;
-      return { escolhidos, linhas, total, anual: Math.round(total * 10 * 100) / 100 };
+      return { escolhidos, linhas, total, anual: Math.round(total * 10 * 100) / 100, inclusos, creditos };
     }
     function urlTestar() {
       const qs = new URLSearchParams({ modulos: sim.sel.join(","), usuarios: String(sim.usuarios) });
@@ -727,7 +764,7 @@
               return `<label class="flex min-h-[60px] cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 transition ${on ? "border-fp-green-dark bg-fp-green-soft" : "border-fp-border bg-white hover:border-fp-green"}">
                 <input type="checkbox" data-mod="${esc(m.slug)}" ${on ? "checked" : ""} class="sr-only" />
                 <span aria-hidden="true" class="mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border text-white text-[12px] font-bold ${on ? "border-fp-green-dark bg-fp-green-dark" : "border-fp-border bg-white"}">${on ? "✓" : ""}</span>
-                <span class="min-w-0"><span class="block text-[14px] font-semibold leading-snug text-fp-ink">${esc(m.nome)}</span><span class="block text-[12.5px] text-fp-mute tabular-nums">a partir de ${fmtMoeda(precoBase(m))}/mês</span></span>
+                <span class="min-w-0"><span class="block text-[14px] font-semibold leading-snug text-fp-ink">${esc(m.nome)}</span><span class="block text-[12.5px] text-fp-mute tabular-nums">a partir de ${fmtMoeda(precoBase(m))}/mês</span><span class="block text-[12px] text-fp-light tabular-nums">${typeof m.usuariosInclusos === "number" ? `${m.usuariosInclusos} usuário${m.usuariosInclusos === 1 ? "" : "s"}` : ""}${m.creditosIAInclusos ? ` · ${m.creditosIAInclusos.toLocaleString("pt-BR")} créditos IA` : ""}</span></span>
               </label>`;
             }).join("")}
           </div>
@@ -743,6 +780,9 @@
         ? c.linhas.map((l) => `<div class="flex justify-between gap-3"><span class="min-w-0 text-fp-graphite">${esc(l.texto)}</span><span class="shrink-0 text-fp-ink tabular-nums">${fmtMoeda(l.valor)}</span></div>`).join("")
         : '<div class="rounded-xl border border-dashed border-fp-border px-3 py-5 text-center text-fp-mute">Marque os módulos e o preço aparece aqui.</div>';
       document.getElementById("sim-total").textContent = fmtMoeda(c.total);
+      document.getElementById("sim-inclui").classList.toggle("hidden", !n);
+      document.getElementById("sim-inc-usuarios").textContent = `até ${Math.max(c.inclusos, sim.usuarios)}`;
+      document.getElementById("sim-inc-creditos").textContent = c.creditos ? c.creditos.toLocaleString("pt-BR") : "—";
       document.getElementById("sim-anual-linha").classList.toggle("hidden", !sim.anual);
       document.getElementById("sim-total-anual").textContent = fmtMoeda(c.anual);
       document.getElementById("sim-testar").disabled = !n;
@@ -774,6 +814,9 @@
       if (sim.sel.length) location.href = urlTestar();
       else document.getElementById("simulador").scrollIntoView({ behavior: "smooth" });
     });
+    document.addEventListener("click", (e) => {
+      document.querySelectorAll("details.sim-info[open]").forEach((d) => { if (!d.contains(e.target)) d.open = false; });
+    });
     // Barra do celular só aparece enquanto o simulador está na tela.
     new IntersectionObserver(([en]) => document.getElementById("sim-barra").classList.toggle("hidden", !en.isIntersecting))
       .observe(document.getElementById("simulador"));
@@ -786,6 +829,7 @@
     (async () => {
       const [cat, pf, ld] = await Promise.all([puxar("/catalogo"), puxar("/plataforma"), puxar("/landing")]);
       estado.modulos = cat?.modulos || [];
+      estado.regrasUsuarios = cat?.regrasUsuarios || null;
       estado.plataforma = pf?.config || {};
       estado.landing = ld?.config || {};
       // Só no rascunho: ?exemplo=1 mostra textos de exemplo nos campos ainda vazios
