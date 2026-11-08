@@ -209,7 +209,11 @@
             <div id="sim-inclui" class="hidden rounded-xl border border-fp-border px-4 py-3 text-[14px]"></div>
             <div class="rounded-xl bg-fp-bg px-4 py-3">
               <div class="flex items-baseline justify-between gap-3"><span class="text-[13px] font-semibold text-fp-mute">Por mês</span><b id="sim-total" class="text-[30px] font-extrabold leading-none tracking-tight text-fp-ink tabular-nums">R$ 0</b></div>
-              <div id="sim-anual-linha" class="hidden mt-2 border-t border-fp-border pt-2 flex items-baseline justify-between gap-3"><span class="text-[12.5px] text-fp-mute">Anual à vista · 2 meses grátis</span><b id="sim-total-anual" class="text-[15px] text-fp-ink tabular-nums"></b></div>
+              <div id="sim-anual-linha" class="hidden mt-3 space-y-1.5 border-t border-fp-border pt-3 text-[13px]">
+                <div class="flex items-baseline justify-between gap-3"><span class="text-fp-mute">12 meses no mensal</span><s id="sim-total-12" class="text-fp-mute tabular-nums"></s></div>
+                <div class="flex items-baseline justify-between gap-3"><span class="min-w-0"><span class="block font-semibold text-fp-ink">Anual à vista</span><span id="sim-equivale" class="block text-[12px] text-fp-mute"></span></span><b id="sim-total-anual" class="text-[16px] text-fp-ink tabular-nums"></b></div>
+                <div class="flex items-baseline justify-between gap-3 rounded-lg bg-fp-green-soft px-2.5 py-1.5 font-bold text-fp-green-dark"><span>Você economiza</span><span id="sim-economia-valor" class="tabular-nums"></span></div>
+              </div>
             </div>
             <button type="button" id="sim-testar" disabled class="btn-primary w-full justify-center disabled:opacity-50 disabled:pointer-events-none">Testar agora</button>
             <p class="text-center text-[12px] text-fp-mute">14 dias grátis. Sem cartão pra começar. Cancele quando quiser.</p>
@@ -852,6 +856,9 @@
       const eco = Math.round(c.total * 2 * 100) / 100;
       document.getElementById("sim-economia").textContent = !n ? "Assine o anual e ganhe 2 meses grátis" : sim.anual ? `Você economiza ${fmtMoeda(eco)} por ano` : `No anual você economiza ${fmtMoeda(eco)}`;
       document.getElementById("sim-total-anual").textContent = fmtMoeda(c.anual);
+      document.getElementById("sim-total-12").textContent = fmtMoeda(Math.round(c.total * 12 * 100) / 100);
+      document.getElementById("sim-equivale").textContent = `equivale a ${fmtMoeda(Math.round((c.anual / 12) * 100) / 100)}/mês`;
+      document.getElementById("sim-economia-valor").textContent = fmtMoeda(Math.round(c.total * 2 * 100) / 100);
       const inc = document.getElementById("sim-inclui");
       inc.classList.toggle("hidden", !n);
       const mini = (alvo, valor, passo) => `<div class="flex items-center gap-1"><button type="button" data-ajuste="${alvo}" data-delta="-${passo}" aria-label="Menos" class="h-7 w-7 rounded-md border border-fp-border bg-white font-bold text-fp-ink hover:border-fp-green">−</button><b class="min-w-[56px] text-center text-fp-ink tabular-nums">${fmtN(valor)}</b><button type="button" data-ajuste="${alvo}" data-delta="${passo}" aria-label="Mais" class="h-7 w-7 rounded-md border border-fp-border bg-white font-bold text-fp-ink hover:border-fp-green">+</button></div>`;
