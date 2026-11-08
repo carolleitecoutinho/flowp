@@ -184,26 +184,8 @@
             <div id="sim-titulo" class="text-[17px] font-bold">Escolha seus módulos</div>
           </div>
           <div class="p-5 space-y-4">
-            <div id="sim-linhas" class="space-y-1.5 text-[14px]"></div>
-            <div id="sim-inclui" class="hidden rounded-xl border border-fp-border px-4 py-3 space-y-2 text-[14px]">
-              <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-fp-mute">O plano inclui</div>
-              <div class="flex items-center justify-between gap-3">
-                <span class="flex items-center gap-1.5 text-fp-graphite">Usuários
-                  <details class="sim-info relative"><summary aria-label="Como contam os usuários" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary>
-                    <div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] leading-snug text-fp-graphite shadow-lg">Os usuários <b>não somam</b>: vale o módulo que dá mais usuários. Ex.: um módulo com 3 e outro com 5 = até 5 pessoas. Passou disso, cada pessoa a mais é cobrada à parte (ou em pacote, se sair mais barato).</div>
-                  </details>
-                </span>
-                <b id="sim-inc-usuarios" class="text-fp-ink tabular-nums"></b>
-              </div>
-              <div class="flex items-center justify-between gap-3">
-                <span class="flex items-center gap-1.5 text-fp-graphite">Créditos de IA por mês
-                  <details class="sim-info relative"><summary aria-label="Como funcionam os créditos" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary>
-                    <div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] leading-snug text-fp-graphite shadow-lg">Os créditos <b>somam</b>: cada módulo traz os seus e o total vira a franquia do mês. Eles pagam o uso da IA (agentes, resumos, sugestões). Renovam todo mês.</div>
-                  </details>
-                </span>
-                <b id="sim-inc-creditos" class="text-fp-ink tabular-nums"></b>
-              </div>
-            </div>
+            <div id="sim-linhas" class="space-y-2.5 text-[14px]"></div>
+            <div id="sim-inclui" class="hidden rounded-xl border border-fp-border px-4 py-3 text-[14px]"></div>
             <div class="rounded-xl bg-fp-bg px-4 py-3">
               <div class="flex items-baseline justify-between gap-3"><span class="text-[13px] font-semibold text-fp-mute">Por mês</span><b id="sim-total" class="text-[30px] font-extrabold leading-none tracking-tight text-fp-ink tabular-nums">R$ 0</b></div>
               <div id="sim-anual-linha" class="hidden mt-2 border-t border-fp-border pt-2 flex items-baseline justify-between gap-3"><span class="text-[12.5px] text-fp-mute">Anual à vista · 2 meses grátis</span><b id="sim-total-anual" class="text-[15px] text-fp-ink tabular-nums"></b></div>
@@ -711,42 +693,55 @@
       return Math.round(valor * 100) / 100;
     }
     function custoExtras(n, r) {
-      if (!r || n <= 0) return 0;
-      let melhor = n * r.precoAvulso;
+      if (!r || n <= 0) return { valor: 0, pacotes: 0, avulsos: 0 };
+      let melhor = { valor: n * r.precoAvulso, pacotes: 0, avulsos: n };
       for (let p = 1; p <= Math.ceil(n / r.pacoteQtd); p++) {
-        const v = p * r.pacotePreco + Math.max(0, n - p * r.pacoteQtd) * r.precoAvulso;
-        if (v < melhor) melhor = v;
+        const avulsos = Math.max(0, n - p * r.pacoteQtd);
+        const valor = p * r.pacotePreco + avulsos * r.precoAvulso;
+        if (valor < melhor.valor) melhor = { valor, pacotes: p, avulsos };
       }
-      return Math.round(melhor * 100) / 100;
+      return { ...melhor, valor: Math.round(melhor.valor * 100) / 100 };
     }
+    const fmtN = (n) => Number(n).toLocaleString("pt-BR");
     function calcSim() {
-      const escolhidos = sim.sel.map((s) => estado.modulos.find((m) => m.slug === s)).filter(Boolean);
+      const escolhidos = sim.sel.map((x) => estado.modulos.find((m) => m.slug === x)).filter(Boolean);
       const regras = estado.regrasUsuarios;
       let porReguaUsuario = false;
+      const metricas = {}; // lead/produto/numero: incluso (o maior) e escolhido
       const linhas = escolhidos.map((m) => {
         const r = m.regua;
-        let v = precoBase(m), det = "";
+        let v = precoBase(m), sub = "";
         if (r && r.metrica === "usuario") {
           porReguaUsuario = true;
-          if (r.usuarioIlimitadoComOutroModulo && escolhidos.length > 1) det = " (usuários ilimitados)";
-          else { v = precoRegua(precoBase(m), r, sim.usuarios); det = ` (${sim.usuarios} usuário${sim.usuarios > 1 ? "s" : ""})`; }
+          if (r.usuarioIlimitadoComOutroModulo && escolhidos.length > 1) sub = "usuários ilimitados";
+          else v = precoRegua(precoBase(m), r, sim.usuarios);
         } else if (r && METRICAS[r.metrica]) {
           const q = sim.qtd[r.metrica] ?? r.incluidos;
           v = precoRegua(precoBase(m), r, q);
-          det = ` (${q.toLocaleString("pt-BR")} ${METRICAS[r.metrica].rotulo.toLowerCase()})`;
+          const nome = METRICAS[r.metrica].rotulo.toLowerCase();
+          sub = q > r.incluidos ? `${fmtN(r.incluidos)} ${nome} no plano + ${fmtN(q - r.incluidos)} a mais` : `até ${fmtN(r.incluidos)} ${nome}`;
+          const mt = metricas[r.metrica] || (metricas[r.metrica] = { incluidos: 0 });
+          mt.incluidos = Math.max(mt.incluidos, r.incluidos || 0);
+          mt.escolhido = q;
         } else if (r && r.metrica !== "nada" && r.metrica !== "cnpj") {
           v = precoRegua(precoBase(m), r, r.incluidos);
         }
-        return { texto: m.nome + det, valor: v };
+        return { texto: m.nome, sub, valor: v };
       });
       // Usuários: vale o MAIOR entre os módulos (não soma). Créditos: SOMAM.
       const padrao = regras?.inclusosPadrao ?? 3;
       const inclusos = escolhidos.length ? Math.max(...escolhidos.map((m) => (typeof m.usuariosInclusos === "number" ? m.usuariosInclusos : padrao))) : 0;
       const creditos = escolhidos.reduce((t, m) => t + (m.creditosIAInclusos || 0), 0);
       const extras = escolhidos.length && !porReguaUsuario ? Math.max(0, sim.usuarios - inclusos) : 0;
-      if (extras > 0 && regras) linhas.push({ texto: `${extras} usuário${extras > 1 ? "s" : ""} a mais`, valor: custoExtras(extras, regras) });
+      if (extras > 0 && regras) {
+        const c = custoExtras(extras, regras);
+        const partes = [];
+        if (c.pacotes) partes.push(`${c.pacotes} pacote${c.pacotes > 1 ? "s" : ""} de ${regras.pacoteQtd} (${fmtMoeda(regras.pacotePreco)})`);
+        if (c.avulsos) partes.push(`${c.avulsos} × ${fmtMoeda(regras.precoAvulso)}`);
+        linhas.push({ texto: `+${extras} usuário${extras > 1 ? "s" : ""}`, sub: `além dos ${inclusos} do plano · ${partes.join(" + ")}`, valor: c.valor });
+      }
       const total = Math.round(linhas.reduce((t, l) => t + l.valor, 0) * 100) / 100;
-      return { escolhidos, linhas, total, anual: Math.round(total * 10 * 100) / 100, inclusos, creditos };
+      return { escolhidos, linhas, total, anual: Math.round(total * 10 * 100) / 100, inclusos, creditos, metricas };
     }
     function urlTestar() {
       const qs = new URLSearchParams({ modulos: sim.sel.join(","), usuarios: String(sim.usuarios) });
@@ -818,14 +813,27 @@
       document.getElementById("sim-limpar").classList.toggle("hidden", !n);
       document.getElementById("sim-titulo").textContent = n ? "Quanto fica pra você" : "Escolha seus módulos";
       document.getElementById("sim-linhas").innerHTML = n
-        ? c.linhas.map((l) => `<div class="flex justify-between gap-3"><span class="min-w-0 text-fp-graphite">${esc(l.texto)}</span><span class="shrink-0 text-fp-ink tabular-nums">${fmtMoeda(l.valor)}</span></div>`).join("")
+        ? c.linhas.map((l) => `<div class="flex justify-between gap-3"><span class="min-w-0"><span class="block text-fp-ink">${esc(l.texto)}</span>${l.sub ? `<span class="block text-[12.5px] leading-snug text-fp-mute">${esc(l.sub)}</span>` : ""}</span><span class="shrink-0 text-fp-ink tabular-nums">${fmtMoeda(l.valor)}</span></div>`).join("")
         : '<div class="rounded-xl border border-dashed border-fp-border px-3 py-5 text-center text-fp-mute">Marque os módulos e o preço aparece aqui.</div>';
       document.getElementById("sim-total").textContent = fmtMoeda(c.total);
-      document.getElementById("sim-inclui").classList.toggle("hidden", !n);
-      document.getElementById("sim-inc-usuarios").textContent = `até ${Math.max(c.inclusos, sim.usuarios)}`;
-      document.getElementById("sim-inc-creditos").textContent = c.creditos ? c.creditos.toLocaleString("pt-BR") : "—";
       document.getElementById("sim-anual-linha").classList.toggle("hidden", !sim.anual);
       document.getElementById("sim-total-anual").textContent = fmtMoeda(c.anual);
+      const inc = document.getElementById("sim-inclui");
+      inc.classList.toggle("hidden", !n);
+      const mini = (alvo, valor, passo) => `<div class="flex items-center gap-1"><button type="button" data-ajuste="${alvo}" data-delta="-${passo}" aria-label="Menos" class="h-7 w-7 rounded-md border border-fp-border bg-white font-bold text-fp-ink hover:border-fp-green">−</button><b class="min-w-[56px] text-center text-fp-ink tabular-nums">${fmtN(valor)}</b><button type="button" data-ajuste="${alvo}" data-delta="${passo}" aria-label="Mais" class="h-7 w-7 rounded-md border border-fp-border bg-white font-bold text-fp-ink hover:border-fp-green">+</button></div>`;
+      const linha = (rotulo, i, sub, dir) => `<div class="flex items-center justify-between gap-3 py-1.5"><span class="min-w-0"><span class="flex items-center gap-1.5 text-fp-graphite">${rotulo}${i}</span>${sub ? `<span class="block text-[12px] text-fp-mute">${sub}</span>` : ""}</span>${dir}</div>`;
+      if (n) {
+        const rows = [`<div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-fp-mute">O plano inclui</div>`];
+        rows.push(linha("Usuários", `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">Os usuários <b>não somam</b>: vale o módulo que dá mais usuários. Ex.: um módulo com 3 e outro com 5 = 5 pessoas. Precisa de mais? Use o + e cada pessoa a mais entra no preço.</div></details>`,
+          sim.usuarios > c.inclusos ? `${c.inclusos} no plano + ${sim.usuarios - c.inclusos} a mais` : `${c.inclusos} no plano`, mini("usuario", sim.usuarios, 1)));
+        for (const [k, mt] of Object.entries(c.metricas)) {
+          const passo = Math.max(1, ...c.escolhidos.filter((m) => m.regua?.metrica === k).map((m) => m.regua.aCada || 1));
+          rows.push(linha(METRICAS[k].rotulo, `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">${METRICAS[k].ajuda} Use o + pra já contratar mais.</div></details>`,
+            mt.escolhido > mt.incluidos ? `${fmtN(mt.incluidos)} no plano + ${fmtN(mt.escolhido - mt.incluidos)} a mais` : `${fmtN(mt.incluidos)} no plano`, mini(k, mt.escolhido, passo)));
+        }
+        rows.push(linha("Créditos de IA por mês", `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">Os créditos <b>somam</b>: cada módulo traz os seus e o total vira a franquia do mês. Eles pagam o uso da IA (agentes, resumos, sugestões) e renovam todo mês.</div></details>`, "", `<b class="text-fp-ink tabular-nums">${c.creditos ? fmtN(c.creditos) : "—"}</b>`));
+        inc.innerHTML = rows.join("");
+      }
       document.getElementById("sim-testar").disabled = !n;
       document.getElementById("sim-barra-sub").textContent = n ? `${n} ${n === 1 ? "módulo" : "módulos"} · ${sim.usuarios} usuário${sim.usuarios > 1 ? "s" : ""} · por mês` : "Nenhum módulo";
       document.getElementById("sim-barra-total").textContent = fmtMoeda(c.total);
@@ -849,6 +857,14 @@
     document.getElementById("sim-menos").addEventListener("click", () => setUsuarios(sim.usuarios - 1));
     document.getElementById("sim-mais").addEventListener("click", () => setUsuarios(sim.usuarios + 1));
     document.getElementById("sim-usuarios").addEventListener("input", (e) => setUsuarios(e.target.value.replace(/\D/g, "")));
+    document.getElementById("sim-inclui").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-ajuste]"); if (!b) return;
+      const k = b.dataset.ajuste, d = Number(b.dataset.delta);
+      if (k === "usuario") { setUsuarios(sim.usuarios + d); return; }
+      sim.qtd[k] = Math.max(0, (sim.qtd[k] || 0) + d);
+      const inp = document.querySelector(`[data-qtd-input="${k}"]`); if (inp) inp.value = sim.qtd[k];
+      atualizarResumo();
+    });
     document.getElementById("sim-qtds").addEventListener("click", (e) => {
       const b = e.target.closest("[data-qtd]"); if (!b) return;
       const k = b.dataset.qtd;
