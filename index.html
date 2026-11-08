@@ -156,7 +156,15 @@
               <div><div class="text-[15px] font-bold text-fp-ink">1. O que você precisa</div><div id="sim-sub" class="text-[13px] text-fp-mute">Marque os módulos de cada setor.</div></div>
               <button type="button" id="sim-limpar" class="hidden text-[13px] font-semibold text-fp-mute hover:text-fp-ink">Limpar</button>
             </div>
-            <div id="sim-setores" class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-2" style="scrollbar-width:none"></div>
+            <!-- Carol nov/08: busca e setores ficam presos no topo enquanto rola os módulos -->
+            <div class="sticky top-[64px] z-20 -mx-4 sm:-mx-5 mb-2 bg-fp-bg/95 backdrop-blur px-4 sm:px-5 pt-2 pb-2 border-b border-fp-border/70">
+              <div class="relative mb-2">
+                <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fp-mute" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input id="sim-busca" type="search" autocomplete="off" placeholder="Buscar módulo" aria-label="Buscar módulo" class="h-10 w-full rounded-xl border border-fp-border bg-white pl-9 pr-9 text-[16px] sm:text-[14px] text-fp-ink outline-none focus:border-fp-green [&::-webkit-search-cancel-button]:hidden" />
+                <button type="button" id="sim-busca-x" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-fp-mute hover:text-fp-ink" title="Limpar busca" aria-label="Limpar busca"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+              </div>
+              <div id="sim-setores" class="-mx-1 flex gap-1.5 overflow-x-auto px-1" style="scrollbar-width:none"></div>
+            </div>
             <div id="sim-modulos" class="space-y-4"><div class="py-8 text-center text-sm text-fp-mute">Carregando módulos…</div></div>
           </div>
           <div class="grid gap-4">
@@ -670,7 +678,7 @@
     // ─── Simulador de plano (Carol nov/08) ───
     // Mesma conta do app (src/lib/plataforma/regua-cobranca.ts + plano-personalizado.ts).
     const ORDEM_SETORES = ["Vendas e CRM", "Atendimento", "Marketing", "Tarefas e organização", "Financeiro", "Operação", "Qualidade e manutenção", "RH", "Condomínio", "Plataforma"];
-    const sim = { sel: [], setor: "todos", usuarios: 3, anual: false, qtd: {} };
+    const sim = { busca: "", sel: [], setor: "todos", usuarios: 3, anual: false, qtd: {} };
     // Carol nov/08: módulo com limite (leads, produtos, números) — a pessoa já escolhe quanto quer.
     const METRICAS = {
       lead: { rotulo: "Leads", ajuda: "Contatos no CRM. O plano já vem com uma quantidade; acima disso o preço sobe por faixa." },
@@ -761,12 +769,15 @@
         const on = sim.setor === g, n = qtdNo(g);
         return `<button type="button" data-setor="${esc(g)}" aria-pressed="${on}" class="shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${on ? "border-fp-green-dark bg-fp-green-dark text-white" : "border-fp-border bg-white text-fp-ink hover:border-fp-green"}">${g === "todos" ? "Todos" : esc(g)}${n ? ` <span class="${on ? "text-white/80" : "text-fp-green-dark"}">${n}</span>` : ""}</button>`;
       }).join("");
-      const grupos = sim.setor === "todos" ? setores : [sim.setor];
+      const termo = sim.busca.trim().toLowerCase();
+      const bate = (m) => !termo || `${m.nome} ${m.descricao || ""}`.toLowerCase().includes(termo);
+      const grupos = (sim.setor === "todos" ? setores : [sim.setor]).filter((g) => mods.some((m) => (m.grupo || "Outros") === g && bate(m)));
+      if (!grupos.length) { box.innerHTML = `<div class="py-8 text-center text-sm text-fp-mute">Nenhum módulo com "${esc(sim.busca.trim())}"</div>`; atualizarResumo(); renderQtds(); return; }
       box.innerHTML = grupos.map((g) => `
         <div>
           ${sim.setor === "todos" ? `<div class="mb-2 text-[11.5px] font-bold uppercase tracking-[0.08em] text-fp-mute">${esc(g)}</div>` : ""}
           <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            ${mods.filter((m) => (m.grupo || "Outros") === g).map((m) => {
+            ${mods.filter((m) => (m.grupo || "Outros") === g && bate(m)).map((m) => {
               const on = sim.sel.includes(m.slug);
               return `<label class="flex min-h-[60px] cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 transition ${on ? "border-fp-green-dark bg-fp-green-soft" : "border-fp-border bg-white hover:border-fp-green"}">
                 <input type="checkbox" data-mod="${esc(m.slug)}" ${on ? "checked" : ""} class="sr-only" />
@@ -814,7 +825,7 @@
       document.getElementById("sim-limpar").classList.toggle("hidden", !n);
       document.getElementById("sim-titulo").textContent = n ? "Quanto fica pra você" : "Escolha seus módulos";
       document.getElementById("sim-linhas").innerHTML = n
-        ? c.linhas.map((l) => `<div class="flex justify-between gap-3"><span class="min-w-0"><span class="block text-fp-ink">${esc(l.texto)}</span>${l.sub ? `<span class="block text-[12.5px] leading-snug text-fp-mute">${esc(l.sub)}</span>` : ""}</span><span class="shrink-0 text-fp-ink tabular-nums">${fmtMoeda(l.valor)}</span></div>`).join("")
+        ? c.linhas.map((l) => `<div class="flex justify-between gap-3"><span class="min-w-0"><span class="block font-semibold text-fp-ink">${esc(l.texto)}</span>${l.sub ? `<span class="mt-0.5 block border-l-2 border-fp-border pl-2.5 text-[12.5px] leading-snug text-fp-mute">${esc(l.sub)}</span>` : ""}</span><span class="shrink-0 font-semibold text-fp-ink tabular-nums">${fmtMoeda(l.valor)}</span></div>`).join("")
         : '<div class="rounded-xl border border-dashed border-fp-border px-3 py-5 text-center text-fp-mute">Marque os módulos e o preço aparece aqui.</div>';
       document.getElementById("sim-total").textContent = fmtMoeda(c.total);
       document.getElementById("sim-anual-linha").classList.toggle("hidden", !sim.anual);
@@ -866,6 +877,16 @@
       const b = e.target.closest("[data-ver]"); if (!b) return;
       e.preventDefault(); e.stopPropagation();
       abrirModulo(b.dataset.ver);
+    });
+    document.getElementById("sim-busca").addEventListener("input", (e) => {
+      sim.busca = e.target.value;
+      document.getElementById("sim-busca-x").classList.toggle("hidden", !sim.busca);
+      renderSimulador();
+    });
+    document.getElementById("sim-busca-x").addEventListener("click", () => {
+      sim.busca = ""; document.getElementById("sim-busca").value = "";
+      document.getElementById("sim-busca-x").classList.add("hidden");
+      renderSimulador();
     });
     document.getElementById("sim-limpar").addEventListener("click", () => { sim.sel = []; renderSimulador(); });
     document.getElementById("sim-menos").addEventListener("click", () => setUsuarios(sim.usuarios - 1));
