@@ -332,6 +332,7 @@
       <div class="shrink-0 border-b border-fp-border px-5 py-4 flex items-center gap-3">
         <div id="modal-icone" class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"></div>
         <div class="min-w-0 flex-1">
+          <div id="modal-grupo" class="text-[11px] font-semibold uppercase tracking-[0.08em] text-fp-green-dark"></div>
           <h3 id="modal-nome" class="text-xl font-extrabold leading-tight"></h3>
           <p id="modal-chamada" class="text-[14px] text-fp-graphite mt-0.5"></p>
         </div>
@@ -343,7 +344,7 @@
       <div class="modal-rodape shrink-0 border-t border-fp-border px-5 py-3.5 grid grid-cols-2 gap-2">
         <div id="modal-preco" class="col-span-2 flex items-baseline gap-1.5 flex-wrap"></div>
         <a id="modal-wa" href="#" data-wa target="_blank" rel="noopener" class="btn-ghost w-full !py-2.5 !px-4 !text-[14px]">Tirar dúvida</a>
-        <a id="modal-trial" href="#" class="btn-primary w-full !py-2.5 !px-5 !text-[14px]">Testar grátis</a>
+        <a id="modal-trial" href="#" class="btn-primary w-full !py-2.5 !px-5 !text-[14px]">Adicionar ao plano</a>
       </div>
     </div>
   </div>
@@ -462,6 +463,7 @@
       ic.innerHTML = iconeHtml(m, 22);
       document.getElementById("modal-nome").textContent = m.nome;
       document.getElementById("modal-chamada").textContent = s.chamada || "";
+      document.getElementById("modal-grupo").textContent = m.grupo || "";
 
       const prints = s.prints || [];
       const passos = linhas(s.comoFunciona);
@@ -470,6 +472,14 @@
       if (s.videoUrl) partes.push(`<div class="mb-6 rounded-2xl bg-fp-ink overflow-hidden flex justify-center">${midiaHtml(s.videoUrl, "block max-h-[62vh] w-auto max-w-full")}</div>`);
       else if (prints[0]) partes.push(`<figure class="janela mb-6"><div class="janela-barra"><i></i><i></i><i></i></div><img src="${esc(prints[0].url)}" alt="${esc(prints[0].legenda || m.nome)}" class="w-full block" />${prints[0].legenda ? `<figcaption class="px-4 py-2.5 text-[12.5px] text-fp-mute border-t border-fp-border">${esc(prints[0].legenda)}</figcaption>` : ""}</figure>`);
       partes.push(`<p class="text-[15px] text-fp-graphite leading-relaxed">${esc(m.descricao || "")}</p>`);
+      {
+        const inc = [];
+        if (typeof m.usuariosInclusos === "number") inc.push(["Usuários", `${m.usuariosInclusos}`]);
+        if (m.regua && METRICAS[m.regua.metrica]) inc.push([METRICAS[m.regua.metrica].rotulo, `${fmtN(m.regua.incluidos)} no plano`]);
+        inc.push(["Créditos de IA por mês", m.creditosIAInclusos ? fmtN(m.creditosIAInclusos) : "—"]);
+        if (m.trialDiasPadrao) inc.push(["Teste grátis", `${m.trialDiasPadrao} dias`]);
+        partes.push(`<div class="mt-5 rounded-xl border border-fp-border px-4 py-3"><div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-fp-mute">O módulo inclui</div>${inc.map(([a, b]) => `<div class="flex items-center justify-between gap-3 py-1.5 text-[14px]"><span class="text-fp-graphite">${esc(a)}</span><b class="text-fp-ink tabular-nums">${esc(b)}</b></div>`).join("")}</div>`);
+      }
       if (s.paraQuem) partes.push(`<div class="mt-5 rounded-2xl bg-fp-green-soft/60 px-5 py-4"><div class="eyebrow text-fp-green-dark mb-1">Pra quem é</div><p class="text-[14px] text-fp-ink">${esc(s.paraQuem)}</p></div>`);
       if (passos.length) partes.push(`<div class="mt-7"><div class="eyebrow text-fp-mute mb-3">Como funciona</div><ol class="grid gap-2.5">${passos.map((p, i) => `<li class="rounded-2xl bg-fp-bg p-3.5 flex items-center gap-3"><div class="w-7 h-7 shrink-0 rounded-full bg-fp-ink text-white text-[13px] font-extrabold flex items-center justify-center">${i + 1}</div><p class="text-[14px] text-fp-ink">${esc(p)}</p></li>`).join("")}</ol></div>`);
       const faz = blocoLista("O que faz", linhas(s.oQueFaz), CHECK);
