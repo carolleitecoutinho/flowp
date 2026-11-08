@@ -85,8 +85,7 @@
       </a>
       <nav class="hidden md:flex items-center gap-8 text-[14px] text-fp-graphite font-medium">
         <a href="#simulador" class="hover:text-fp-ink transition">Simular plano</a>
-        <a href="#catalogo-ao-vivo" class="hover:text-fp-ink transition">Módulos e preços</a>
-        <a href="#case" class="hover:text-fp-ink transition">Caso real</a>
+                <a href="#case" class="hover:text-fp-ink transition">Caso real</a>
         <a href="#faq" class="hover:text-fp-ink transition">Dúvidas</a>
       </nav>
       <div class="flex items-center gap-3">
@@ -112,7 +111,7 @@
           Aplicativos integrados pra empresas que querem crescer com controle. Pegue 1 módulo, escale quando crescer.
         </p>
         <div class="mt-9 flex items-center gap-3 flex-wrap">
-          <a href="#catalogo-ao-vivo" class="btn-primary" data-landing-href="hero.ctaPrimarioHref" data-landing="hero.ctaPrimarioTexto">Ver módulos e preços</a>
+          <a href="#simulador" class="btn-primary" data-landing-href="hero.ctaPrimarioHref" data-landing="hero.ctaPrimarioTexto">Ver módulos e preços</a>
           <a href="#" data-wa class="btn-ghost">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="#22C55E"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.8 0-1.4.7-2 1-2.3.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2c.1.2.1.4 0 .6l-.3.5-.4.5c-.1.2-.3.3-.1.6.2.3.7 1.2 1.6 1.9 1.1 1 2 1.3 2.3 1.4.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.7-.1l1.9.9c.3.1.5.2.5.3.1.2.1.8-.1 1.5Z"/></svg>
             Falar com uma pessoa
@@ -143,6 +142,7 @@
 
   <!-- Simulador de plano (Carol nov/08): monta o plano e já testa com tudo marcado -->
   <section id="simulador" class="bg-white border-t border-fp-border" style="scroll-margin-top: 70px">
+    <span id="catalogo-ao-vivo" style="position:relative;top:-70px;display:block;height:0" aria-hidden="true"></span>
     <div class="max-w-6xl mx-auto px-4 lg:px-8 py-16 lg:py-20">
       <div class="max-w-2xl mb-8">
         <div class="eyebrow text-fp-green-dark mb-3">Simule agora</div>
@@ -201,20 +201,6 @@
       <div class="flex items-center justify-between gap-3">
         <div class="min-w-0"><div id="sim-barra-sub" class="text-[12px] text-fp-mute"></div><div id="sim-barra-total" class="text-[20px] font-extrabold leading-tight text-fp-ink tabular-nums"></div></div>
         <button type="button" id="sim-barra-btn" class="btn-primary !py-2.5 !px-4 !text-[14px]">Testar agora</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Catálogo ao vivo -->
-  <section id="catalogo-ao-vivo" class="bg-fp-bg border-t border-fp-border" style="scroll-margin-top: 70px" data-landing-block="catalogo">
-    <div class="max-w-7xl mx-auto px-4 lg:px-8 py-20 lg:py-24">
-      <div class="text-center max-w-2xl mx-auto mb-12">
-        <div class="eyebrow text-fp-green-dark mb-3" data-landing="catalogo.eyebrow">Módulos</div>
-        <h2 class="h2"><span data-landing="catalogo.titulo">Escolha o que</span> <span class="text-grad-brand" data-landing="catalogo.tituloDestaque">resolve agora.</span></h2>
-        <p class="mt-5 text-fp-graphite text-lg" data-landing="catalogo.subtitulo">Cada módulo funciona sozinho e conversa com os outros. 14 dias grátis, sem cartão.</p>
-      </div>
-      <div id="catalogo-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 pt-4 max-w-6xl mx-auto">
-        <div class="col-span-full text-center py-12 text-fp-mute text-sm">Carregando módulos…</div>
       </div>
     </div>
   </section>
@@ -293,7 +279,7 @@
       <h2 class="h2"><span data-landing="ctaFinal.titulo">Sua operação merece</span> <span class="text-grad-brand" data-landing="ctaFinal.tituloDestaque">um sistema que conversa.</span></h2>
       <p class="mt-5 text-fp-graphite text-lg" data-landing="ctaFinal.subtitulo">Comece pelo módulo que dói mais. Adicione o resto quando crescer.</p>
       <div class="mt-8 flex items-center justify-center gap-3 flex-wrap">
-        <a href="#catalogo-ao-vivo" class="btn-primary" data-landing="ctaFinal.botaoTexto">Ver módulos e preços</a>
+        <a href="#simulador" class="btn-primary" data-landing="ctaFinal.botaoTexto">Ver módulos e preços</a>
         <a href="#" data-wa class="btn-ghost">Falar no WhatsApp</a>
       </div>
     </div>
@@ -501,7 +487,10 @@
       document.getElementById("modal-corpo").scrollTop = 0;
 
       document.getElementById("modal-preco").innerHTML = precoHtml(m, false);
-      document.getElementById("modal-trial").href = `${APP_BASE}/cadastro?modulo=${encodeURIComponent(m.slug)}`;
+      const bt = document.getElementById("modal-trial");
+      bt.href = "#simulador";
+      bt.dataset.slug = m.slug;
+      bt.textContent = sim.sel.includes(m.slug) ? "Tirar do plano" : "Adicionar ao plano";
       document.getElementById("modal-wa").dataset.waMsg = `Olá! Quero saber mais sobre o módulo ${m.nome} do flow.pbr.`;
       aplicarWhatsapp();
 
@@ -535,6 +524,7 @@
     function renderCatalogo() {
       const mods = estado.modulos;
       const grid = document.getElementById("catalogo-grid");
+      if (!grid) return; // Carol nov/08: a vitrine virou o simulador
       grid.innerHTML = mods.length
         ? mods.map(renderCard).join("")
         : '<div class="col-span-full text-center py-12 text-fp-mute">Em breve.</div>';
@@ -771,7 +761,8 @@
               return `<label class="flex min-h-[60px] cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 transition ${on ? "border-fp-green-dark bg-fp-green-soft" : "border-fp-border bg-white hover:border-fp-green"}">
                 <input type="checkbox" data-mod="${esc(m.slug)}" ${on ? "checked" : ""} class="sr-only" />
                 <span aria-hidden="true" class="mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border text-white text-[12px] font-bold ${on ? "border-fp-green-dark bg-fp-green-dark" : "border-fp-border bg-white"}">${on ? "✓" : ""}</span>
-                <span class="min-w-0"><span class="block text-[14px] font-semibold leading-snug text-fp-ink">${esc(m.nome)}</span><span class="block text-[12.5px] text-fp-mute tabular-nums">a partir de ${fmtMoeda(precoBase(m))}/mês</span><span class="block text-[12px] text-fp-light tabular-nums">${typeof m.usuariosInclusos === "number" ? `${m.usuariosInclusos} usuário${m.usuariosInclusos === 1 ? "" : "s"}` : ""}${m.creditosIAInclusos ? ` · ${m.creditosIAInclusos.toLocaleString("pt-BR")} créditos IA` : ""}</span></span>
+                <span class="min-w-0 flex-1"><span class="block text-[14px] font-semibold leading-snug text-fp-ink">${esc(m.nome)}</span><span class="block text-[12.5px] text-fp-mute tabular-nums">a partir de ${fmtMoeda(precoBase(m))}/mês</span><span class="block text-[12px] text-fp-light tabular-nums">${typeof m.usuariosInclusos === "number" ? `${m.usuariosInclusos} usuário${m.usuariosInclusos === 1 ? "" : "s"}` : ""}${m.creditosIAInclusos ? ` · ${m.creditosIAInclusos.toLocaleString("pt-BR")} créditos IA` : ""}</span></span>
+                <button type="button" data-ver="${esc(m.slug)}" title="Ver o que o módulo faz" aria-label="Ver o que ${esc(m.nome)} faz" class="-mr-1 -mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-fp-mute hover:bg-white hover:text-fp-green-dark"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
               </label>`;
             }).join("")}
           </div>
@@ -852,6 +843,19 @@
       const s = e.target.dataset.mod; if (!s) return;
       sim.sel = sim.sel.includes(s) ? sim.sel.filter((x) => x !== s) : [...sim.sel, s];
       renderSimulador();
+    });
+    document.getElementById("modal-trial").addEventListener("click", (e) => {
+      e.preventDefault();
+      const x = e.currentTarget.dataset.slug; if (!x) return;
+      sim.sel = sim.sel.includes(x) ? sim.sel.filter((y) => y !== x) : [...sim.sel, x];
+      fecharModal();
+      renderSimulador();
+      document.getElementById("simulador").scrollIntoView({ behavior: "smooth" });
+    });
+    document.getElementById("sim-modulos").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-ver]"); if (!b) return;
+      e.preventDefault(); e.stopPropagation();
+      abrirModulo(b.dataset.ver);
     });
     document.getElementById("sim-limpar").addEventListener("click", () => { sim.sel = []; renderSimulador(); });
     document.getElementById("sim-menos").addEventListener("click", () => setUsuarios(sim.usuarios - 1));
