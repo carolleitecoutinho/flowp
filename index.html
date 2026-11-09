@@ -85,8 +85,7 @@
       </a>
       <nav class="hidden md:flex items-center gap-8 text-[14px] text-fp-graphite font-medium">
         <a href="#simulador" class="hover:text-fp-ink transition">Simular plano</a>
-        <a href="#catalogo-ao-vivo" class="hover:text-fp-ink transition">Módulos e preços</a>
-        <a href="#case" class="hover:text-fp-ink transition">Caso real</a>
+                <a href="#case" class="hover:text-fp-ink transition">Caso real</a>
         <a href="#faq" class="hover:text-fp-ink transition">Dúvidas</a>
       </nav>
       <div class="flex items-center gap-3">
@@ -112,7 +111,7 @@
           Aplicativos integrados pra empresas que querem crescer com controle. Pegue 1 módulo, escale quando crescer.
         </p>
         <div class="mt-9 flex items-center gap-3 flex-wrap">
-          <a href="#catalogo-ao-vivo" class="btn-primary" data-landing-href="hero.ctaPrimarioHref" data-landing="hero.ctaPrimarioTexto">Ver módulos e preços</a>
+          <a href="#simulador" class="btn-primary" data-landing-href="hero.ctaPrimarioHref" data-landing="hero.ctaPrimarioTexto">Ver módulos e preços</a>
           <a href="#" data-wa class="btn-ghost">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="#22C55E"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.8 0-1.4.7-2 1-2.3.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2c.1.2.1.4 0 .6l-.3.5-.4.5c-.1.2-.3.3-.1.6.2.3.7 1.2 1.6 1.9 1.1 1 2 1.3 2.3 1.4.3.1.5.1.6-.1l.9-1c.2-.3.4-.2.7-.1l1.9.9c.3.1.5.2.5.3.1.2.1.8-.1 1.5Z"/></svg>
             Falar com uma pessoa
@@ -143,6 +142,7 @@
 
   <!-- Simulador de plano (Carol nov/08): monta o plano e já testa com tudo marcado -->
   <section id="simulador" class="bg-white border-t border-fp-border" style="scroll-margin-top: 70px">
+    <span id="catalogo-ao-vivo" style="position:relative;top:-70px;display:block;height:0" aria-hidden="true"></span>
     <div class="max-w-6xl mx-auto px-4 lg:px-8 py-16 lg:py-20">
       <div class="max-w-2xl mb-8">
         <div class="eyebrow text-fp-green-dark mb-3">Simule agora</div>
@@ -156,12 +156,20 @@
               <div><div class="text-[15px] font-bold text-fp-ink">1. O que você precisa</div><div id="sim-sub" class="text-[13px] text-fp-mute">Marque os módulos de cada setor.</div></div>
               <button type="button" id="sim-limpar" class="hidden text-[13px] font-semibold text-fp-mute hover:text-fp-ink">Limpar</button>
             </div>
-            <div id="sim-setores" class="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-2" style="scrollbar-width:none"></div>
+            <!-- Carol nov/08: busca e setores ficam presos no topo enquanto rola os módulos -->
+            <div class="sticky top-[64px] z-20 -mx-4 sm:-mx-5 mb-2 bg-fp-bg/95 backdrop-blur px-4 sm:px-5 pt-2 pb-2 border-b border-fp-border/70">
+              <div class="relative mb-2">
+                <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fp-mute" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <input id="sim-busca" type="search" autocomplete="off" placeholder="Buscar módulo" aria-label="Buscar módulo" class="h-10 w-full rounded-xl border border-fp-border bg-white pl-9 pr-9 text-[16px] sm:text-[14px] text-fp-ink outline-none focus:border-fp-green [&::-webkit-search-cancel-button]:hidden" />
+                <button type="button" id="sim-busca-x" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-fp-mute hover:text-fp-ink" title="Limpar busca" aria-label="Limpar busca"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+              </div>
+              <div id="sim-setores" class="-mx-1 flex gap-1.5 overflow-x-auto px-1" style="scrollbar-width:none"></div>
+            </div>
             <div id="sim-modulos" class="space-y-4"><div class="py-8 text-center text-sm text-fp-mute">Carregando módulos…</div></div>
           </div>
-          <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-4">
             <div class="rounded-2xl border border-fp-border bg-fp-bg p-4 sm:p-5">
-              <div class="text-[15px] font-bold text-fp-ink mb-3">2. Quantas pessoas vão usar</div>
+              <div class="text-[15px] font-bold text-fp-ink mb-3">2. Tamanho da operação</div>
               <div class="flex items-center justify-between gap-3">
                 <span class="text-[14px] font-semibold text-fp-graphite">Usuários</span>
                 <div class="flex items-center gap-1.5">
@@ -170,23 +178,42 @@
                   <button type="button" id="sim-mais" aria-label="Mais usuários" class="h-10 w-10 rounded-lg border border-fp-border bg-white text-lg font-bold text-fp-ink hover:border-fp-green">+</button>
                 </div>
               </div>
+              <div id="sim-qtds" class="mt-3 space-y-3"></div>
             </div>
-            <label class="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-fp-border bg-fp-bg p-4 sm:p-5">
-              <span><span class="block text-[15px] font-bold text-fp-ink">3. Plano anual</span><span class="block text-[13px] text-fp-mute">Paga 10 meses, leva 12</span></span>
-              <input type="checkbox" id="sim-anual" class="h-5 w-5 accent-[#16A34A]" />
-            </label>
+            <!-- Carol nov/08: não é forma de pagamento, é a oferta do anual -->
+            <div class="rounded-2xl border border-[#BBF7D0] bg-gradient-to-br from-fp-green-soft to-white p-4 sm:p-5">
+              <div class="mb-3 flex items-center gap-3">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-fp-green-dark text-white">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7M7.5 8a2.5 2.5 0 0 1 0-5C9 3 12 8 12 8s3-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg>
+                </span>
+                <div class="min-w-0">
+                  <div class="text-[15.5px] font-extrabold leading-tight text-fp-green-dark">3. Pague 10 meses e use 12</div>
+                  <div id="sim-economia" class="text-[13px] font-semibold text-fp-green-dark/80 tabular-nums">Assine o anual e ganhe 2 meses grátis</div>
+                </div>
+              </div>
+              <div role="radiogroup" class="flex gap-1 rounded-xl bg-white p-1 ring-1 ring-[#BBF7D0]">
+                <button type="button" role="radio" data-anual="0" class="sim-opc flex-1 rounded-lg px-3 py-2.5 text-[14px] font-bold transition">Mensal</button>
+                <button type="button" role="radio" data-anual="1" class="sim-opc flex-1 rounded-lg px-3 py-2.5 text-[14px] font-bold transition">Anual <span class="sim-selo mx-auto mt-1 block w-fit whitespace-nowrap sm:ml-1 sm:mt-0 sm:inline rounded-full px-1.5 py-0.5 text-[11px] font-extrabold">2 meses grátis</span></button>
+              </div>
+              <input type="checkbox" id="sim-anual" class="hidden" />
+            </div>
           </div>
         </div>
-        <aside id="sim-resumo" class="min-w-0 lg:sticky lg:top-[84px] rounded-2xl border border-fp-border bg-white shadow-sm overflow-hidden" style="scroll-margin-top: 80px">
-          <div class="bg-grad-dark px-5 py-4 text-white">
+        <aside id="sim-resumo" class="min-w-0 lg:sticky lg:top-[84px] rounded-2xl border border-fp-border bg-white shadow-sm" style="scroll-margin-top: 80px">
+          <div class="bg-grad-dark rounded-t-2xl px-5 py-4 text-white">
             <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/60">Seu plano</div>
             <div id="sim-titulo" class="text-[17px] font-bold">Escolha seus módulos</div>
           </div>
           <div class="p-5 space-y-4">
-            <div id="sim-linhas" class="space-y-1.5 text-[14px]"></div>
+            <div id="sim-linhas" class="space-y-2.5 text-[14px]"></div>
+            <div id="sim-inclui" class="hidden rounded-xl border border-fp-border px-4 py-3 text-[14px]"></div>
             <div class="rounded-xl bg-fp-bg px-4 py-3">
               <div class="flex items-baseline justify-between gap-3"><span class="text-[13px] font-semibold text-fp-mute">Por mês</span><b id="sim-total" class="text-[30px] font-extrabold leading-none tracking-tight text-fp-ink tabular-nums">R$ 0</b></div>
-              <div id="sim-anual-linha" class="hidden mt-2 border-t border-fp-border pt-2 flex items-baseline justify-between gap-3"><span class="text-[12.5px] text-fp-mute">Anual à vista · 2 meses grátis</span><b id="sim-total-anual" class="text-[15px] text-fp-ink tabular-nums"></b></div>
+              <div id="sim-anual-linha" class="hidden mt-3 space-y-1.5 border-t border-fp-border pt-3 text-[13px]">
+                <div class="flex items-baseline justify-between gap-3"><span class="text-fp-mute">12 meses no mensal</span><s id="sim-total-12" class="text-fp-mute tabular-nums"></s></div>
+                <div class="flex items-baseline justify-between gap-3"><span class="min-w-0"><span class="block font-semibold text-fp-ink">Anual à vista</span><span id="sim-equivale" class="block text-[12px] text-fp-mute"></span></span><b id="sim-total-anual" class="text-[16px] text-fp-ink tabular-nums"></b></div>
+                <div class="flex items-baseline justify-between gap-3 rounded-lg bg-fp-green-soft px-2.5 py-1.5 font-bold text-fp-green-dark"><span>Você economiza</span><span id="sim-economia-valor" class="tabular-nums"></span></div>
+              </div>
             </div>
             <button type="button" id="sim-testar" disabled class="btn-primary w-full justify-center disabled:opacity-50 disabled:pointer-events-none">Testar agora</button>
             <p class="text-center text-[12px] text-fp-mute">14 dias grátis. Sem cartão pra começar. Cancele quando quiser.</p>
@@ -199,20 +226,6 @@
       <div class="flex items-center justify-between gap-3">
         <div class="min-w-0"><div id="sim-barra-sub" class="text-[12px] text-fp-mute"></div><div id="sim-barra-total" class="text-[20px] font-extrabold leading-tight text-fp-ink tabular-nums"></div></div>
         <button type="button" id="sim-barra-btn" class="btn-primary !py-2.5 !px-4 !text-[14px]">Testar agora</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Catálogo ao vivo -->
-  <section id="catalogo-ao-vivo" class="bg-fp-bg border-t border-fp-border" style="scroll-margin-top: 70px" data-landing-block="catalogo">
-    <div class="max-w-7xl mx-auto px-4 lg:px-8 py-20 lg:py-24">
-      <div class="text-center max-w-2xl mx-auto mb-12">
-        <div class="eyebrow text-fp-green-dark mb-3" data-landing="catalogo.eyebrow">Módulos</div>
-        <h2 class="h2"><span data-landing="catalogo.titulo">Escolha o que</span> <span class="text-grad-brand" data-landing="catalogo.tituloDestaque">resolve agora.</span></h2>
-        <p class="mt-5 text-fp-graphite text-lg" data-landing="catalogo.subtitulo">Cada módulo funciona sozinho e conversa com os outros. 14 dias grátis, sem cartão.</p>
-      </div>
-      <div id="catalogo-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 pt-4 max-w-6xl mx-auto">
-        <div class="col-span-full text-center py-12 text-fp-mute text-sm">Carregando módulos…</div>
       </div>
     </div>
   </section>
@@ -291,7 +304,7 @@
       <h2 class="h2"><span data-landing="ctaFinal.titulo">Sua operação merece</span> <span class="text-grad-brand" data-landing="ctaFinal.tituloDestaque">um sistema que conversa.</span></h2>
       <p class="mt-5 text-fp-graphite text-lg" data-landing="ctaFinal.subtitulo">Comece pelo módulo que dói mais. Adicione o resto quando crescer.</p>
       <div class="mt-8 flex items-center justify-center gap-3 flex-wrap">
-        <a href="#catalogo-ao-vivo" class="btn-primary" data-landing="ctaFinal.botaoTexto">Ver módulos e preços</a>
+        <a href="#simulador" class="btn-primary" data-landing="ctaFinal.botaoTexto">Ver módulos e preços</a>
         <a href="#" data-wa class="btn-ghost">Falar no WhatsApp</a>
       </div>
     </div>
@@ -344,6 +357,7 @@
       <div class="shrink-0 border-b border-fp-border px-5 py-4 flex items-center gap-3">
         <div id="modal-icone" class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"></div>
         <div class="min-w-0 flex-1">
+          <div id="modal-grupo" class="text-[11px] font-semibold uppercase tracking-[0.08em] text-fp-green-dark"></div>
           <h3 id="modal-nome" class="text-xl font-extrabold leading-tight"></h3>
           <p id="modal-chamada" class="text-[14px] text-fp-graphite mt-0.5"></p>
         </div>
@@ -355,7 +369,7 @@
       <div class="modal-rodape shrink-0 border-t border-fp-border px-5 py-3.5 grid grid-cols-2 gap-2">
         <div id="modal-preco" class="col-span-2 flex items-baseline gap-1.5 flex-wrap"></div>
         <a id="modal-wa" href="#" data-wa target="_blank" rel="noopener" class="btn-ghost w-full !py-2.5 !px-4 !text-[14px]">Tirar dúvida</a>
-        <a id="modal-trial" href="#" class="btn-primary w-full !py-2.5 !px-5 !text-[14px]">Testar grátis</a>
+        <a id="modal-trial" href="#" class="btn-primary w-full !py-2.5 !px-5 !text-[14px]">Adicionar ao plano</a>
       </div>
     </div>
   </div>
@@ -474,6 +488,7 @@
       ic.innerHTML = iconeHtml(m, 22);
       document.getElementById("modal-nome").textContent = m.nome;
       document.getElementById("modal-chamada").textContent = s.chamada || "";
+      document.getElementById("modal-grupo").textContent = m.grupo || "";
 
       const prints = s.prints || [];
       const passos = linhas(s.comoFunciona);
@@ -482,6 +497,14 @@
       if (s.videoUrl) partes.push(`<div class="mb-6 rounded-2xl bg-fp-ink overflow-hidden flex justify-center">${midiaHtml(s.videoUrl, "block max-h-[62vh] w-auto max-w-full")}</div>`);
       else if (prints[0]) partes.push(`<figure class="janela mb-6"><div class="janela-barra"><i></i><i></i><i></i></div><img src="${esc(prints[0].url)}" alt="${esc(prints[0].legenda || m.nome)}" class="w-full block" />${prints[0].legenda ? `<figcaption class="px-4 py-2.5 text-[12.5px] text-fp-mute border-t border-fp-border">${esc(prints[0].legenda)}</figcaption>` : ""}</figure>`);
       partes.push(`<p class="text-[15px] text-fp-graphite leading-relaxed">${esc(m.descricao || "")}</p>`);
+      {
+        const inc = [];
+        if (typeof m.usuariosInclusos === "number") inc.push(["Usuários", `${m.usuariosInclusos}`]);
+        if (m.regua && METRICAS[m.regua.metrica]) inc.push([METRICAS[m.regua.metrica].rotulo, `${fmtN(m.regua.incluidos)} no plano`]);
+        inc.push(["Créditos de IA por mês", m.creditosIAInclusos ? fmtN(m.creditosIAInclusos) : "—"]);
+        if (m.trialDiasPadrao) inc.push(["Teste grátis", `${m.trialDiasPadrao} dias`]);
+        partes.push(`<div class="mt-5 rounded-xl border border-fp-border px-4 py-3"><div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-fp-mute">O módulo inclui</div>${inc.map(([a, b]) => `<div class="flex items-center justify-between gap-3 py-1.5 text-[14px]"><span class="text-fp-graphite">${esc(a)}</span><b class="text-fp-ink tabular-nums">${esc(b)}</b></div>`).join("")}</div>`);
+      }
       if (s.paraQuem) partes.push(`<div class="mt-5 rounded-2xl bg-fp-green-soft/60 px-5 py-4"><div class="eyebrow text-fp-green-dark mb-1">Pra quem é</div><p class="text-[14px] text-fp-ink">${esc(s.paraQuem)}</p></div>`);
       if (passos.length) partes.push(`<div class="mt-7"><div class="eyebrow text-fp-mute mb-3">Como funciona</div><ol class="grid gap-2.5">${passos.map((p, i) => `<li class="rounded-2xl bg-fp-bg p-3.5 flex items-center gap-3"><div class="w-7 h-7 shrink-0 rounded-full bg-fp-ink text-white text-[13px] font-extrabold flex items-center justify-center">${i + 1}</div><p class="text-[14px] text-fp-ink">${esc(p)}</p></li>`).join("")}</ol></div>`);
       const faz = blocoLista("O que faz", linhas(s.oQueFaz), CHECK);
@@ -499,7 +522,10 @@
       document.getElementById("modal-corpo").scrollTop = 0;
 
       document.getElementById("modal-preco").innerHTML = precoHtml(m, false);
-      document.getElementById("modal-trial").href = `${APP_BASE}/cadastro?modulo=${encodeURIComponent(m.slug)}`;
+      const bt = document.getElementById("modal-trial");
+      bt.href = "#simulador";
+      bt.dataset.slug = m.slug;
+      bt.textContent = sim.sel.includes(m.slug) ? "Tirar do plano" : "Adicionar ao plano";
       document.getElementById("modal-wa").dataset.waMsg = `Olá! Quero saber mais sobre o módulo ${m.nome} do flow.pbr.`;
       aplicarWhatsapp();
 
@@ -533,6 +559,7 @@
     function renderCatalogo() {
       const mods = estado.modulos;
       const grid = document.getElementById("catalogo-grid");
+      if (!grid) return; // Carol nov/08: a vitrine virou o simulador
       grid.innerHTML = mods.length
         ? mods.map(renderCard).join("")
         : '<div class="col-span-full text-center py-12 text-fp-mute">Em breve.</div>';
@@ -668,7 +695,14 @@
     // ─── Simulador de plano (Carol nov/08) ───
     // Mesma conta do app (src/lib/plataforma/regua-cobranca.ts + plano-personalizado.ts).
     const ORDEM_SETORES = ["Vendas e CRM", "Atendimento", "Marketing", "Tarefas e organização", "Financeiro", "Operação", "Qualidade e manutenção", "RH", "Condomínio", "Plataforma"];
-    const sim = { sel: [], setor: "todos", usuarios: 3, anual: false };
+    const sim = { busca: "", sel: [], setor: "todos", usuarios: 3, anual: false, qtd: {} };
+    // Carol nov/08: módulo com limite (leads, produtos, números) — a pessoa já escolhe quanto quer.
+    const METRICAS = {
+      lead: { rotulo: "Leads", ajuda: "Contatos no CRM. O plano já vem com uma quantidade; acima disso o preço sobe por faixa." },
+      produto: { rotulo: "Produtos", ajuda: "Produtos cadastrados no módulo." },
+      produto_precificador: { rotulo: "Produtos no precificador", ajuda: "Produtos com preço calculado no precificador." },
+      numero: { rotulo: "Números de WhatsApp", ajuda: "Cada número conectado conta à parte." },
+    };
     const precoBase = (m) => (m.precoMensalPromocional > 0 ? m.precoMensalPromocional : (m.precoMensalSugerido || 0));
     function precoRegua(base, r, q) {
       if (!r || r.metrica === "nada" || r.metrica === "cnpj") return base;
@@ -683,21 +717,56 @@
       if (r.teto != null && valor > r.teto) valor = r.teto;
       return Math.round(valor * 100) / 100;
     }
+    function custoExtras(n, r) {
+      if (!r || n <= 0) return { valor: 0, pacotes: 0, avulsos: 0 };
+      let melhor = { valor: n * r.precoAvulso, pacotes: 0, avulsos: n };
+      for (let p = 1; p <= Math.ceil(n / r.pacoteQtd); p++) {
+        const avulsos = Math.max(0, n - p * r.pacoteQtd);
+        const valor = p * r.pacotePreco + avulsos * r.precoAvulso;
+        if (valor < melhor.valor) melhor = { valor, pacotes: p, avulsos };
+      }
+      return { ...melhor, valor: Math.round(melhor.valor * 100) / 100 };
+    }
+    const fmtN = (n) => Number(n).toLocaleString("pt-BR");
     function calcSim() {
-      const escolhidos = sim.sel.map((s) => estado.modulos.find((m) => m.slug === s)).filter(Boolean);
+      const escolhidos = sim.sel.map((x) => estado.modulos.find((m) => m.slug === x)).filter(Boolean);
+      const regras = estado.regrasUsuarios;
+      let porReguaUsuario = false;
+      const metricas = {}; // lead/produto/numero: incluso (o maior) e escolhido
       const linhas = escolhidos.map((m) => {
         const r = m.regua;
-        let v = precoBase(m), det = "";
+        let v = precoBase(m), sub = "";
         if (r && r.metrica === "usuario") {
-          if (r.usuarioIlimitadoComOutroModulo && escolhidos.length > 1) det = " (usuários ilimitados)";
-          else { v = precoRegua(precoBase(m), r, sim.usuarios); det = ` (${sim.usuarios} usuário${sim.usuarios > 1 ? "s" : ""})`; }
+          porReguaUsuario = true;
+          if (r.usuarioIlimitadoComOutroModulo && escolhidos.length > 1) sub = "usuários ilimitados";
+          else v = precoRegua(precoBase(m), r, sim.usuarios);
+        } else if (r && METRICAS[r.metrica]) {
+          const q = sim.qtd[r.metrica] ?? r.incluidos;
+          v = precoRegua(precoBase(m), r, q);
+          const nome = METRICAS[r.metrica].rotulo.toLowerCase();
+          sub = q > r.incluidos ? `${fmtN(r.incluidos)} ${nome} no plano + ${fmtN(q - r.incluidos)} a mais` : `até ${fmtN(r.incluidos)} ${nome}`;
+          const mt = metricas[r.metrica] || (metricas[r.metrica] = { incluidos: 0 });
+          mt.incluidos = Math.max(mt.incluidos, r.incluidos || 0);
+          mt.escolhido = q;
         } else if (r && r.metrica !== "nada" && r.metrica !== "cnpj") {
           v = precoRegua(precoBase(m), r, r.incluidos);
         }
-        return { texto: m.nome + det, valor: v };
+        return { texto: m.nome, sub, valor: v };
       });
+      // Usuários: vale o MAIOR entre os módulos (não soma). Créditos: SOMAM.
+      const padrao = regras?.inclusosPadrao ?? 3;
+      const inclusos = escolhidos.length ? Math.max(...escolhidos.map((m) => (typeof m.usuariosInclusos === "number" ? m.usuariosInclusos : padrao))) : 0;
+      const creditos = escolhidos.reduce((t, m) => t + (m.creditosIAInclusos || 0), 0);
+      const extras = escolhidos.length && !porReguaUsuario ? Math.max(0, sim.usuarios - inclusos) : 0;
+      if (extras > 0 && regras) {
+        const c = custoExtras(extras, regras);
+        const partes = [];
+        if (c.pacotes) partes.push(`${c.pacotes} pacote${c.pacotes > 1 ? "s" : ""} de ${regras.pacoteQtd} (${fmtMoeda(regras.pacotePreco)})`);
+        if (c.avulsos) partes.push(`${c.avulsos} × ${fmtMoeda(regras.precoAvulso)}`);
+        linhas.push({ texto: `+${extras} usuário${extras > 1 ? "s" : ""}`, sub: `além dos ${inclusos} do plano · ${partes.join(" + ")}`, valor: c.valor });
+      }
       const total = Math.round(linhas.reduce((t, l) => t + l.valor, 0) * 100) / 100;
-      return { escolhidos, linhas, total, anual: Math.round(total * 10 * 100) / 100 };
+      return { escolhidos, linhas, total, anual: Math.round(total * 10 * 100) / 100, inclusos, creditos, metricas };
     }
     function urlTestar() {
       const qs = new URLSearchParams({ modulos: sim.sel.join(","), usuarios: String(sim.usuarios) });
@@ -717,22 +786,55 @@
         const on = sim.setor === g, n = qtdNo(g);
         return `<button type="button" data-setor="${esc(g)}" aria-pressed="${on}" class="shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${on ? "border-fp-green-dark bg-fp-green-dark text-white" : "border-fp-border bg-white text-fp-ink hover:border-fp-green"}">${g === "todos" ? "Todos" : esc(g)}${n ? ` <span class="${on ? "text-white/80" : "text-fp-green-dark"}">${n}</span>` : ""}</button>`;
       }).join("");
-      const grupos = sim.setor === "todos" ? setores : [sim.setor];
+      const termo = sim.busca.trim().toLowerCase();
+      const bate = (m) => !termo || `${m.nome} ${m.descricao || ""}`.toLowerCase().includes(termo);
+      const grupos = (sim.setor === "todos" ? setores : [sim.setor]).filter((g) => mods.some((m) => (m.grupo || "Outros") === g && bate(m)));
+      if (!grupos.length) { box.innerHTML = `<div class="py-8 text-center text-sm text-fp-mute">Nenhum módulo com "${esc(sim.busca.trim())}"</div>`; atualizarResumo(); renderQtds(); return; }
       box.innerHTML = grupos.map((g) => `
         <div>
           ${sim.setor === "todos" ? `<div class="mb-2 text-[11.5px] font-bold uppercase tracking-[0.08em] text-fp-mute">${esc(g)}</div>` : ""}
           <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            ${mods.filter((m) => (m.grupo || "Outros") === g).map((m) => {
+            ${mods.filter((m) => (m.grupo || "Outros") === g && bate(m)).map((m) => {
               const on = sim.sel.includes(m.slug);
               return `<label class="flex min-h-[60px] cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 transition ${on ? "border-fp-green-dark bg-fp-green-soft" : "border-fp-border bg-white hover:border-fp-green"}">
                 <input type="checkbox" data-mod="${esc(m.slug)}" ${on ? "checked" : ""} class="sr-only" />
                 <span aria-hidden="true" class="mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border text-white text-[12px] font-bold ${on ? "border-fp-green-dark bg-fp-green-dark" : "border-fp-border bg-white"}">${on ? "✓" : ""}</span>
-                <span class="min-w-0"><span class="block text-[14px] font-semibold leading-snug text-fp-ink">${esc(m.nome)}</span><span class="block text-[12.5px] text-fp-mute tabular-nums">a partir de ${fmtMoeda(precoBase(m))}/mês</span></span>
+                <span class="min-w-0 flex-1"><span class="block text-[14px] font-semibold leading-snug text-fp-ink">${esc(m.nome)}</span><span class="block text-[12.5px] text-fp-mute tabular-nums">a partir de ${fmtMoeda(precoBase(m))}/mês</span>${typeof m.usuariosInclusos === "number" ? `<span class="block text-[12px] text-fp-light tabular-nums">${m.usuariosInclusos} usuário${m.usuariosInclusos === 1 ? "" : "s"}</span>` : ""}${m.creditosIAInclusos ? `<span class="block text-[12px] text-fp-light tabular-nums">${m.creditosIAInclusos.toLocaleString("pt-BR")} créditos de IA/mês</span>` : ""}</span>
+                <button type="button" data-ver="${esc(m.slug)}" title="Ver o que o módulo faz" aria-label="Ver o que ${esc(m.nome)} faz" class="-mr-1 -mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-fp-mute hover:bg-white hover:text-fp-green-dark"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
               </label>`;
             }).join("")}
           </div>
         </div>`).join("");
+      renderQtds();
       atualizarResumo();
+    }
+    function renderQtds() {
+      const escolhidos = sim.sel.map((x) => estado.modulos.find((m) => m.slug === x)).filter(Boolean);
+      const usadas = {};
+      for (const m of escolhidos) {
+        const r = m.regua;
+        if (!r || !METRICAS[r.metrica]) continue;
+        const u = usadas[r.metrica] || (usadas[r.metrica] = { incluidos: 0, passo: 1 });
+        u.incluidos = Math.max(u.incluidos, r.incluidos || 0);
+        u.passo = Math.max(u.passo, r.aCada || 1, r.forma === "faixas" && r.faixas?.length ? 1 : 1);
+      }
+      for (const k of Object.keys(sim.qtd)) if (!usadas[k]) delete sim.qtd[k];
+      document.getElementById("sim-qtds").innerHTML = Object.entries(usadas).map(([k, u]) => {
+        if (sim.qtd[k] == null) sim.qtd[k] = u.incluidos;
+        const v = sim.qtd[k];
+        return `<div class="flex items-center justify-between gap-3 border-t border-fp-border pt-3">
+          <span class="flex items-center gap-1.5 text-[14px] font-semibold text-fp-graphite">${METRICAS[k].rotulo}
+            <details class="sim-info relative"><summary aria-label="O que conta" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary>
+              <div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">${METRICAS[k].ajuda} Já incluso: ${u.incluidos.toLocaleString("pt-BR")}.</div>
+            </details>
+          </span>
+          <div class="flex items-center gap-1.5">
+            <button type="button" data-qtd="${k}" data-delta="-${u.passo}" aria-label="Menos ${METRICAS[k].rotulo}" class="h-10 w-10 rounded-lg border border-fp-border bg-white text-lg font-bold text-fp-ink hover:border-fp-green">−</button>
+            <input data-qtd-input="${k}" inputmode="numeric" aria-label="${METRICAS[k].rotulo}" value="${v}" class="h-10 w-24 rounded-lg border border-fp-border bg-white text-center text-[15px] font-bold text-fp-ink outline-none focus:border-fp-green" />
+            <button type="button" data-qtd="${k}" data-delta="${u.passo}" aria-label="Mais ${METRICAS[k].rotulo}" class="h-10 w-10 rounded-lg border border-fp-border bg-white text-lg font-bold text-fp-ink hover:border-fp-green">+</button>
+          </div>
+        </div>`;
+      }).join("");
     }
     function atualizarResumo() {
       const c = calcSim(), n = c.escolhidos.length;
@@ -740,11 +842,39 @@
       document.getElementById("sim-limpar").classList.toggle("hidden", !n);
       document.getElementById("sim-titulo").textContent = n ? "Quanto fica pra você" : "Escolha seus módulos";
       document.getElementById("sim-linhas").innerHTML = n
-        ? c.linhas.map((l) => `<div class="flex justify-between gap-3"><span class="min-w-0 text-fp-graphite">${esc(l.texto)}</span><span class="shrink-0 text-fp-ink tabular-nums">${fmtMoeda(l.valor)}</span></div>`).join("")
+        ? c.linhas.map((l) => `<div class="flex justify-between gap-3"><span class="min-w-0"><span class="block font-semibold text-fp-ink">${esc(l.texto)}</span>${l.sub ? `<span class="mt-0.5 block border-l-2 border-fp-border pl-2.5 text-[12.5px] leading-snug text-fp-mute">${esc(l.sub)}</span>` : ""}</span><span class="shrink-0 font-semibold text-fp-ink tabular-nums">${fmtMoeda(l.valor)}</span></div>`).join("")
         : '<div class="rounded-xl border border-dashed border-fp-border px-3 py-5 text-center text-fp-mute">Marque os módulos e o preço aparece aqui.</div>';
       document.getElementById("sim-total").textContent = fmtMoeda(c.total);
       document.getElementById("sim-anual-linha").classList.toggle("hidden", !sim.anual);
+      document.querySelectorAll(".sim-opc").forEach((b) => {
+        const on = (b.dataset.anual === "1") === sim.anual;
+        b.setAttribute("aria-checked", on);
+        b.className = `sim-opc flex-1 rounded-lg px-3 py-2.5 text-[14px] font-bold transition ${on ? (b.dataset.anual === "1" ? "bg-fp-green-dark text-white shadow-sm" : "bg-fp-bg text-fp-ink shadow-sm ring-1 ring-fp-border") : "text-fp-mute hover:text-fp-ink"}`;
+        const selo = b.querySelector(".sim-selo");
+        if (selo) selo.className = `sim-selo mx-auto mt-1 block w-fit whitespace-nowrap sm:ml-1 sm:mt-0 sm:inline rounded-full px-1.5 py-0.5 text-[11px] font-extrabold ${on ? "bg-white/20 text-white" : "bg-fp-green-soft text-fp-green-dark"}`;
+      });
+      const eco = Math.round(c.total * 2 * 100) / 100;
+      document.getElementById("sim-economia").textContent = !n ? "Assine o anual e ganhe 2 meses grátis" : sim.anual ? `Você economiza ${fmtMoeda(eco)} por ano` : `No anual você economiza ${fmtMoeda(eco)}`;
       document.getElementById("sim-total-anual").textContent = fmtMoeda(c.anual);
+      document.getElementById("sim-total-12").textContent = fmtMoeda(Math.round(c.total * 12 * 100) / 100);
+      document.getElementById("sim-equivale").textContent = `equivale a ${fmtMoeda(Math.round((c.anual / 12) * 100) / 100)}/mês`;
+      document.getElementById("sim-economia-valor").textContent = fmtMoeda(Math.round(c.total * 2 * 100) / 100);
+      const inc = document.getElementById("sim-inclui");
+      inc.classList.toggle("hidden", !n);
+      const mini = (alvo, valor, passo) => `<div class="flex items-center gap-1"><button type="button" data-ajuste="${alvo}" data-delta="-${passo}" aria-label="Menos" class="h-7 w-7 rounded-md border border-fp-border bg-white font-bold text-fp-ink hover:border-fp-green">−</button><b class="min-w-[56px] text-center text-fp-ink tabular-nums">${fmtN(valor)}</b><button type="button" data-ajuste="${alvo}" data-delta="${passo}" aria-label="Mais" class="h-7 w-7 rounded-md border border-fp-border bg-white font-bold text-fp-ink hover:border-fp-green">+</button></div>`;
+      const linha = (rotulo, i, sub, dir) => `<div class="flex items-center justify-between gap-3 py-1.5"><span class="min-w-0"><span class="flex items-center gap-1.5 text-fp-graphite">${rotulo}${i}</span>${sub ? `<span class="block text-[12px] text-fp-mute">${sub}</span>` : ""}</span>${dir}</div>`;
+      if (n) {
+        const rows = [`<div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-fp-mute">O plano inclui</div>`];
+        rows.push(linha("Usuários", `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">Os usuários <b>não somam</b>: vale o módulo que dá mais usuários. Ex.: um módulo com 3 e outro com 5 = 5 pessoas. Precisa de mais? Use o + e cada pessoa a mais entra no preço.</div></details>`,
+          sim.usuarios > c.inclusos ? `${c.inclusos} no plano + ${sim.usuarios - c.inclusos} a mais` : `${c.inclusos} no plano`, mini("usuario", sim.usuarios, 1)));
+        for (const [k, mt] of Object.entries(c.metricas)) {
+          const passo = Math.max(1, ...c.escolhidos.filter((m) => m.regua?.metrica === k).map((m) => m.regua.aCada || 1));
+          rows.push(linha(METRICAS[k].rotulo, `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">${METRICAS[k].ajuda} Use o + pra já contratar mais.</div></details>`,
+            mt.escolhido > mt.incluidos ? `${fmtN(mt.incluidos)} no plano + ${fmtN(mt.escolhido - mt.incluidos)} a mais` : `${fmtN(mt.incluidos)} no plano`, mini(k, mt.escolhido, passo)));
+        }
+        rows.push(linha("Créditos de IA por mês", `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">Os créditos <b>somam</b>: cada módulo traz os seus e o total vira a franquia do mês. Eles pagam o uso da IA (agentes, resumos, sugestões) e renovam todo mês.</div></details>`, "", `<b class="text-fp-ink tabular-nums">${c.creditos ? fmtN(c.creditos) : "—"}</b>`));
+        inc.innerHTML = rows.join("");
+      }
       document.getElementById("sim-testar").disabled = !n;
       document.getElementById("sim-barra-sub").textContent = n ? `${n} ${n === 1 ? "módulo" : "módulos"} · ${sim.usuarios} usuário${sim.usuarios > 1 ? "s" : ""} · por mês` : "Nenhum módulo";
       document.getElementById("sim-barra-total").textContent = fmtMoeda(c.total);
@@ -764,15 +894,61 @@
       sim.sel = sim.sel.includes(s) ? sim.sel.filter((x) => x !== s) : [...sim.sel, s];
       renderSimulador();
     });
+    document.getElementById("modal-trial").addEventListener("click", (e) => {
+      e.preventDefault();
+      const x = e.currentTarget.dataset.slug; if (!x) return;
+      sim.sel = sim.sel.includes(x) ? sim.sel.filter((y) => y !== x) : [...sim.sel, x];
+      fecharModal();
+      renderSimulador();
+      document.getElementById("simulador").scrollIntoView({ behavior: "smooth" });
+    });
+    document.getElementById("sim-modulos").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-ver]"); if (!b) return;
+      e.preventDefault(); e.stopPropagation();
+      abrirModulo(b.dataset.ver);
+    });
+    document.getElementById("sim-busca").addEventListener("input", (e) => {
+      sim.busca = e.target.value;
+      document.getElementById("sim-busca-x").classList.toggle("hidden", !sim.busca);
+      renderSimulador();
+    });
+    document.getElementById("sim-busca-x").addEventListener("click", () => {
+      sim.busca = ""; document.getElementById("sim-busca").value = "";
+      document.getElementById("sim-busca-x").classList.add("hidden");
+      renderSimulador();
+    });
     document.getElementById("sim-limpar").addEventListener("click", () => { sim.sel = []; renderSimulador(); });
     document.getElementById("sim-menos").addEventListener("click", () => setUsuarios(sim.usuarios - 1));
     document.getElementById("sim-mais").addEventListener("click", () => setUsuarios(sim.usuarios + 1));
     document.getElementById("sim-usuarios").addEventListener("input", (e) => setUsuarios(e.target.value.replace(/\D/g, "")));
-    document.getElementById("sim-anual").addEventListener("change", (e) => { sim.anual = e.target.checked; atualizarResumo(); });
+    document.getElementById("sim-inclui").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-ajuste]"); if (!b) return;
+      const k = b.dataset.ajuste, d = Number(b.dataset.delta);
+      if (k === "usuario") { setUsuarios(sim.usuarios + d); return; }
+      sim.qtd[k] = Math.max(0, (sim.qtd[k] || 0) + d);
+      const inp = document.querySelector(`[data-qtd-input="${k}"]`); if (inp) inp.value = sim.qtd[k];
+      atualizarResumo();
+    });
+    document.getElementById("sim-qtds").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-qtd]"); if (!b) return;
+      const k = b.dataset.qtd;
+      sim.qtd[k] = Math.max(0, (sim.qtd[k] || 0) + Number(b.dataset.delta));
+      document.querySelector(`[data-qtd-input="${k}"]`).value = sim.qtd[k];
+      atualizarResumo();
+    });
+    document.getElementById("sim-qtds").addEventListener("input", (e) => {
+      const k = e.target.dataset.qtdInput; if (!k) return;
+      sim.qtd[k] = Math.max(0, Math.floor(Number(e.target.value.replace(/\D/g, "")) || 0));
+      atualizarResumo();
+    });
+    document.querySelectorAll(".sim-opc").forEach((b) => b.addEventListener("click", () => { sim.anual = b.dataset.anual === "1"; atualizarResumo(); }));
     document.getElementById("sim-testar").addEventListener("click", () => { if (sim.sel.length) location.href = urlTestar(); });
     document.getElementById("sim-barra-btn").addEventListener("click", () => {
       if (sim.sel.length) location.href = urlTestar();
       else document.getElementById("simulador").scrollIntoView({ behavior: "smooth" });
+    });
+    document.addEventListener("click", (e) => {
+      document.querySelectorAll("details.sim-info[open]").forEach((d) => { if (!d.contains(e.target)) d.open = false; });
     });
     // Barra do celular só aparece enquanto o simulador está na tela.
     new IntersectionObserver(([en]) => document.getElementById("sim-barra").classList.toggle("hidden", !en.isIntersecting))
@@ -786,6 +962,7 @@
     (async () => {
       const [cat, pf, ld] = await Promise.all([puxar("/catalogo"), puxar("/plataforma"), puxar("/landing")]);
       estado.modulos = cat?.modulos || [];
+      estado.regrasUsuarios = cat?.regrasUsuarios || null;
       estado.plataforma = pf?.config || {};
       estado.landing = ld?.config || {};
       // Só no rascunho: ?exemplo=1 mostra textos de exemplo nos campos ainda vazios
