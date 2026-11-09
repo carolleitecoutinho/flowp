@@ -740,9 +740,16 @@
     function custoExtras(n, r) {
       if (!r || n <= 0) return { valor: 0, pacotes: 0, avulsos: 0 };
       if (r.degraus?.length) {
-        let unit = r.degraus[0].preco;
-        for (const d of r.degraus) if (n >= d.aPartirDe) unit = d.preco;
-        return { valor: Math.round(n * unit * 100) / 100, pacotes: 0, avulsos: n, precoUnit: unit };
+        // Progressivo (Carol nov/09): cada extra paga o degrau em que ele cai; nunca cai ao aumentar.
+        const faixas = []; let total = 0;
+        for (let i = 1; i <= n; i++) {
+          let u = r.degraus[0].preco;
+          for (const d of r.degraus) if (i >= d.aPartirDe) u = d.preco;
+          total += u;
+          const ult = faixas[faixas.length - 1];
+          if (ult && ult.unit === u) ult.qtd++; else faixas.push({ qtd: 1, unit: u });
+        }
+        return { valor: Math.round(total * 100) / 100, pacotes: 0, avulsos: n, faixas };
       }
       let melhor = { valor: n * r.precoAvulso, pacotes: 0, avulsos: n };
       for (let p = 1; p <= Math.ceil(n / r.pacoteQtd); p++) {
@@ -799,7 +806,8 @@
         const c = custoExtras(extras, regras);
         const partes = [];
         if (c.pacotes) partes.push(`${c.pacotes} pacote${c.pacotes > 1 ? "s" : ""} de ${regras.pacoteQtd} (${fmtMoeda(regras.pacotePreco)})`);
-        if (c.avulsos) partes.push(`${c.avulsos} × ${fmtMoeda(c.precoUnit ?? regras.precoAvulso)}`);
+        if (c.faixas) partes.push(c.faixas.map((f) => `${f.qtd} × ${fmtMoeda(f.unit)}`).join(" + "));
+        else if (c.avulsos) partes.push(`${c.avulsos} × ${fmtMoeda(regras.precoAvulso)}`);
         linhas.push({ texto: `+${extras} usuário${extras > 1 ? "s" : ""}`, sub: `além dos ${inclusos} do plano · ${partes.join(" + ")}`, valor: c.valor });
       }
       if (temIg && sim.contasIg > 1 && precoIg > 0) {
