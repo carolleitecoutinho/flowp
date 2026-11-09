@@ -695,7 +695,7 @@
     // ─── Simulador de plano (Carol nov/08) ───
     // Mesma conta do app (src/lib/plataforma/regua-cobranca.ts + plano-personalizado.ts).
     const ORDEM_SETORES = ["Vendas e CRM", "Atendimento", "Marketing", "Tarefas e organização", "Financeiro", "Operação", "Qualidade e manutenção", "RH", "Condomínio", "Plataforma"];
-    const sim = { busca: "", sel: [], setor: "todos", usuarios: 0, anual: false, qtd: {} }; // usuarios 0 = ainda não mexeu (vale o que o plano inclui)
+    const sim = { busca: "", sel: [], setor: "todos", usuarios: 0, anual: false, qtd: {}, numeros: 1, contasIg: 1 }; // usuarios 0 = ainda não mexeu (vale o que o plano inclui)
     // Carol nov/08: módulo com limite (leads, produtos, números) — a pessoa já escolhe quanto quer.
     const METRICAS = {
       lead: { rotulo: "Leads", ajuda: "Contatos no CRM. O plano já vem com uma quantidade; acima disso o preço sobe por faixa." },
@@ -737,7 +737,12 @@
       const metricas = {}; // lead/produto/numero: incluso (o maior) e escolhido
       // Usuários: vale o MAIOR entre os módulos (não soma); o contador nunca fica abaixo disso.
       const padraoU = regras?.inclusosPadrao ?? 3;
-      const inclusos = escolhidos.length ? Math.max(...escolhidos.map((m) => (typeof m.usuariosInclusos === "number" ? m.usuariosInclusos : padraoU))) : 0;
+      // WhatsApp: preço, usuários e créditos POR NÚMERO. Instagram: 1 conta inclusa, extra cobra.
+      const fatorNum = (m) => (m.porNumero ? Math.max(1, sim.numeros) : 1);
+      const temWa = escolhidos.some((m) => m.porNumero);
+      const temIg = escolhidos.some((m) => m.instagram);
+      const precoIg = Math.max(0, ...escolhidos.map((m) => m.instagram?.precoConta || 0));
+      const inclusos = escolhidos.length ? Math.max(...escolhidos.map((m) => (typeof m.usuariosInclusos === "number" ? m.usuariosInclusos : padraoU) * fatorNum(m))) : 0;
       const uEf = Math.max(sim.usuarios, inclusos, 1);
       const linhas = escolhidos.map((m) => {
         const r = m.regua;
@@ -746,7 +751,7 @@
           if (r.usuarioIlimitadoComOutroModulo && escolhidos.length > 1) sub = "usuários ilimitados";
           else v = precoRegua(precoBase(m), r, uEf);
         } else if (r && METRICAS[r.metrica]) {
-          const q = sim.qtd[r.metrica] ?? r.incluidos;
+          const q = r.metrica === "numero" && temWa ? Math.max(1, sim.numeros) : sim.qtd[r.metrica] ?? r.incluidos;
           v = precoRegua(precoBase(m), r, q);
           const nome = METRICAS[r.metrica].rotulo.toLowerCase();
           sub = q > r.incluidos ? `${fmtN(r.incluidos)} ${nome} no plano + ${fmtN(q - r.incluidos)} a mais` : `até ${fmtN(r.incluidos)} ${nome}`;
@@ -756,10 +761,14 @@
         } else if (r && r.metrica !== "nada" && r.metrica !== "cnpj") {
           v = precoRegua(precoBase(m), r, r.incluidos);
         }
+        if (m.porNumero && !(r && r.metrica === "numero")) {
+          v = Math.round(precoBase(m) * Math.max(1, sim.numeros) * 100) / 100;
+          sub = `${sim.numeros} número${sim.numeros > 1 ? "s" : ""} × ${fmtMoeda(precoBase(m))}`;
+        }
         return { texto: m.nome, sub, valor: v };
       });
       // Usuários: vale o MAIOR entre os módulos (não soma). Créditos: SOMAM.
-      const creditos = escolhidos.reduce((t, m) => t + (m.creditosIAInclusos || 0), 0);
+      const creditos = escolhidos.reduce((t, m) => t + (m.creditosIAInclusos || 0) * fatorNum(m), 0);
       const extras = escolhidos.length && !porReguaUsuario ? Math.max(0, uEf - inclusos) : 0;
       if (extras > 0 && regras) {
         const c = custoExtras(extras, regras);
@@ -768,12 +777,18 @@
         if (c.avulsos) partes.push(`${c.avulsos} × ${fmtMoeda(regras.precoAvulso)}`);
         linhas.push({ texto: `+${extras} usuário${extras > 1 ? "s" : ""}`, sub: `além dos ${inclusos} do plano · ${partes.join(" + ")}`, valor: c.valor });
       }
+      if (temIg && sim.contasIg > 1 && precoIg > 0) {
+        const ex = sim.contasIg - 1;
+        linhas.push({ texto: `+${ex} conta${ex > 1 ? "s" : ""} de Instagram`, sub: `além da 1 do plano · ${ex} × ${fmtMoeda(precoIg)}`, valor: Math.round(ex * precoIg * 100) / 100 });
+      }
       const total = Math.round(linhas.reduce((t, l) => t + l.valor, 0) * 100) / 100;
-      return { escolhidos, linhas, total, anual: Math.round(total * 10 * 100) / 100, inclusos, creditos, metricas, uEf };
+      return { escolhidos, linhas, total, anual: Math.round(total * 10 * 100) / 100, inclusos, creditos, metricas, uEf, temWa, temIg, precoIg };
     }
     function urlTestar() {
       const qs = new URLSearchParams({ modulos: sim.sel.join(","), usuarios: String(calcSim().uEf) });
       if (sim.anual) qs.set("anual", "1");
+      if (sim.numeros > 1) qs.set("numeros", String(sim.numeros));
+      if (sim.contasIg > 1) qs.set("instagram", String(sim.contasIg));
       return `${APP_BASE}/cadastro?${qs.toString()}`;
     }
     function renderSimulador() {
@@ -817,6 +832,7 @@
       for (const m of escolhidos) {
         const r = m.regua;
         if (!r || !METRICAS[r.metrica]) continue;
+        if (r.metrica === "numero" && escolhidos.some((x) => x.porNumero)) continue; // o contador de números do WhatsApp cuida
         const u = usadas[r.metrica] || (usadas[r.metrica] = { incluidos: 0, passo: 1 });
         u.incluidos = Math.max(u.incluidos, r.incluidos || 0);
         u.passo = Math.max(u.passo, r.aCada || 1, r.forma === "faixas" && r.faixas?.length ? 1 : 1);
@@ -838,6 +854,21 @@
           </div>
         </div>`;
       }).join("");
+      // Carol nov/09: WhatsApp por número e Instagram por conta.
+      const canal = (rotulo, alvo, valor) => `<div class="flex items-center justify-between gap-3 border-t border-fp-border pt-3">
+          <span class="text-[14px] font-semibold text-fp-graphite">${rotulo}</span>
+          <div class="flex items-center gap-1.5">
+            <button type="button" data-ajuste="${alvo}" data-delta="-1" aria-label="Menos ${rotulo}" class="h-10 w-10 rounded-lg border border-fp-border bg-white text-lg font-bold text-fp-ink hover:border-fp-green">−</button>
+            <b class="h-10 w-16 rounded-lg border border-fp-border bg-white flex items-center justify-center text-[15px] text-fp-ink tabular-nums">${valor}</b>
+            <button type="button" data-ajuste="${alvo}" data-delta="1" aria-label="Mais ${rotulo}" class="h-10 w-10 rounded-lg border border-fp-border bg-white text-lg font-bold text-fp-ink hover:border-fp-green">+</button>
+          </div>
+        </div>`;
+      let extra = "";
+      if (escolhidos.some((m) => m.porNumero)) extra += canal("Números de WhatsApp", "wa", sim.numeros);
+      else sim.numeros = 1;
+      if (escolhidos.some((m) => m.instagram)) extra += canal("Contas de Instagram", "ig", sim.contasIg);
+      else sim.contasIg = 1;
+      document.getElementById("sim-qtds").insertAdjacentHTML("beforeend", extra);
     }
     function atualizarResumo() {
       const c = calcSim(), n = c.escolhidos.length;
@@ -873,10 +904,13 @@
         rows.push(linha("Usuários", `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">Os usuários <b>não somam</b>: vale o módulo que dá mais usuários. Ex.: um módulo com 3 e outro com 5 = 5 pessoas. Precisa de mais? Use o + e cada pessoa a mais entra no preço.</div></details>`,
           c.uEf > c.inclusos ? `${c.inclusos} no plano + ${c.uEf - c.inclusos} a mais` : `${c.inclusos} no plano`, mini("usuario", c.uEf, 1)));
         for (const [k, mt] of Object.entries(c.metricas)) {
+          if (k === "numero" && c.temWa) continue;
           const passo = Math.max(1, ...c.escolhidos.filter((m) => m.regua?.metrica === k).map((m) => m.regua.aCada || 1));
           rows.push(linha(METRICAS[k].rotulo, `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">${METRICAS[k].ajuda} Use o + pra já contratar mais.</div></details>`,
             mt.escolhido > mt.incluidos ? `${fmtN(mt.incluidos)} no plano + ${fmtN(mt.escolhido - mt.incluidos)} a mais` : `${fmtN(mt.incluidos)} no plano`, mini(k, mt.escolhido, passo)));
         }
+        if (c.temWa) rows.push(linha("Números de WhatsApp", `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">O WhatsApp é cobrado por número conectado. Cada número traz os usuários e os créditos de IA do módulo.</div></details>`, "preço, usuários e créditos por número", mini("wa", sim.numeros, 1)));
+        if (c.temIg) rows.push(linha("Contas de Instagram", `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">O módulo já vem com 1 conta de Instagram. Cada conta a mais custa ${fmtMoeda(c.precoIg || 80)} por mês.</div></details>`, sim.contasIg > 1 ? `1 no plano + ${sim.contasIg - 1} a mais` : "1 no plano", mini("ig", sim.contasIg, 1)));
         rows.push(linha("Créditos de IA por mês", `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">Os créditos <b>somam</b>: cada módulo traz os seus e o total vira a franquia do mês. Eles pagam o uso da IA (agentes, resumos, sugestões) e renovam todo mês.</div></details>`, "", `<b class="text-fp-ink tabular-nums">${c.creditos ? fmtN(c.creditos) : "—"}</b>`));
         inc.innerHTML = rows.join("");
       }
@@ -930,11 +964,15 @@
       const b = e.target.closest("[data-ajuste]"); if (!b) return;
       const k = b.dataset.ajuste, d = Number(b.dataset.delta);
       if (k === "usuario") { setUsuarios(calcSim().uEf + d); return; }
+      if (k === "wa") { sim.numeros = Math.max(1, sim.numeros + d); renderQtds(); atualizarResumo(); return; }
+      if (k === "ig") { sim.contasIg = Math.max(1, sim.contasIg + d); renderQtds(); atualizarResumo(); return; }
       sim.qtd[k] = Math.max(0, (sim.qtd[k] || 0) + d);
       const inp = document.querySelector(`[data-qtd-input="${k}"]`); if (inp) inp.value = sim.qtd[k];
       atualizarResumo();
     });
     document.getElementById("sim-qtds").addEventListener("click", (e) => {
+      const aj = e.target.closest("[data-ajuste]");
+      if (aj) { const d = Number(aj.dataset.delta); if (aj.dataset.ajuste === "wa") sim.numeros = Math.max(1, sim.numeros + d); else sim.contasIg = Math.max(1, sim.contasIg + d); renderQtds(); atualizarResumo(); return; }
       const b = e.target.closest("[data-qtd]"); if (!b) return;
       const k = b.dataset.qtd;
       sim.qtd[k] = Math.max(0, (sim.qtd[k] || 0) + Number(b.dataset.delta));
