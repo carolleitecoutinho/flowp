@@ -719,6 +719,11 @@
     }
     function custoExtras(n, r) {
       if (!r || n <= 0) return { valor: 0, pacotes: 0, avulsos: 0 };
+      if (r.degraus?.length) {
+        let unit = r.degraus[0].preco;
+        for (const d of r.degraus) if (n >= d.aPartirDe) unit = d.preco;
+        return { valor: Math.round(n * unit * 100) / 100, pacotes: 0, avulsos: n, precoUnit: unit };
+      }
       let melhor = { valor: n * r.precoAvulso, pacotes: 0, avulsos: n };
       for (let p = 1; p <= Math.ceil(n / r.pacoteQtd); p++) {
         const avulsos = Math.max(0, n - p * r.pacoteQtd);
@@ -774,7 +779,7 @@
         const c = custoExtras(extras, regras);
         const partes = [];
         if (c.pacotes) partes.push(`${c.pacotes} pacote${c.pacotes > 1 ? "s" : ""} de ${regras.pacoteQtd} (${fmtMoeda(regras.pacotePreco)})`);
-        if (c.avulsos) partes.push(`${c.avulsos} × ${fmtMoeda(regras.precoAvulso)}`);
+        if (c.avulsos) partes.push(`${c.avulsos} × ${fmtMoeda(c.precoUnit ?? regras.precoAvulso)}`);
         linhas.push({ texto: `+${extras} usuário${extras > 1 ? "s" : ""}`, sub: `além dos ${inclusos} do plano · ${partes.join(" + ")}`, valor: c.valor });
       }
       if (temIg && sim.contasIg > 1 && precoIg > 0) {
