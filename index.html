@@ -16,6 +16,9 @@
   <meta property="og:url" content="https://flowpbr.com" />
   <meta property="og:image" content="https://storage.googleapis.com/dashboard-gula-fit.firebasestorage.app/platform/ogImageUrl/1778030163124_Prancheta_1.png" />
 
+  <link rel="preconnect" href="https://app.flowpbr.com" crossorigin />
+  <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin />
+  <link rel="preconnect" href="https://storage.googleapis.com" crossorigin />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -559,8 +562,8 @@
     function renderCatalogo() {
       const mods = estado.modulos;
       const grid = document.getElementById("catalogo-grid");
-      if (!grid) return; // Carol nov/08: a vitrine virou o simulador
-      grid.innerHTML = mods.length
+      // Carol nov/08: a vitrine de baixo virou o simulador — mas o banner do topo continua daqui.
+      if (grid) grid.innerHTML = mods.length
         ? mods.map(renderCard).join("")
         : '<div class="col-span-full text-center py-12 text-fp-mute">Em breve.</div>';
 
@@ -570,18 +573,35 @@
       // Vitrine do topo: o primeiro vídeo HORIZONTAL que existir (Reels em pé não cabe ali)
       // (na ordem do catálogo, não na ordem em que os vídeos terminam de carregar)
       const candidatos = mods.filter((m) => m.site?.videoUrl && !/\.gif(\?|$)/i.test(m.site.videoUrl));
-      Promise.all(candidatos.map((m) => new Promise((ok) => {
-        const v = document.createElement("video");
-        v.preload = "metadata"; v.muted = true; v.src = m.site.videoUrl;
-        v.onloadedmetadata = () => ok(v.videoWidth > v.videoHeight ? m : null);
-        v.onerror = () => ok(null);
-      }))).then((r) => {
-        const m = r.find(Boolean);
-        if (!m) return;
+      // Carol nov/09: demorava porque esperava TODOS os vídeos. Agora mostra o 1º horizontal
+      // (na ordem do catálogo) assim que ele e os anteriores responderem, e lembra a escolha.
+      const mostrarVideo = (m) => {
         vit.className = "aspect-video bg-fp-ink cursor-pointer";
         vit.setAttribute("data-abrir", m.slug);
         vit.innerHTML = midiaHtml(m.site.videoUrl, "w-full h-full object-cover");
-      });
+        try { localStorage.setItem("flowpbr:video-hero", m.site.videoUrl); } catch {}
+      };
+      let lembrado = null;
+      try { lembrado = localStorage.getItem("flowpbr:video-hero"); } catch {}
+      const jaSabido = lembrado && candidatos.find((m) => m.site.videoUrl === lembrado);
+      if (jaSabido) mostrarVideo(jaSabido);
+      else {
+        const res = new Array(candidatos.length);
+        let feito = false;
+        const conferir = () => {
+          if (feito) return;
+          for (let i = 0; i < res.length; i++) {
+            if (res[i] === undefined) return; // ainda esperando um anterior
+            if (res[i]) { feito = true; mostrarVideo(res[i]); return; }
+          }
+        };
+        candidatos.forEach((m, i) => {
+          const v = document.createElement("video");
+          v.preload = "metadata"; v.muted = true; v.src = m.site.videoUrl;
+          v.onloadedmetadata = () => { res[i] = v.videoWidth > v.videoHeight ? m : null; conferir(); };
+          v.onerror = () => { res[i] = null; conferir(); };
+        });
+      }
       if (comPrint) {
         vit.className = "aspect-[16/10] bg-fp-bg";
         vit.innerHTML = `<img src="${esc(comPrint.site.prints[0].url)}" alt="${esc(comPrint.nome)}" class="w-full h-full object-cover object-top" />`;
@@ -1023,19 +1043,29 @@
       try { const r = await fetch(API + rota); if (!r.ok) throw 0; return await r.json(); }
       catch { return null; }
     }
-    (async () => {
-      const [cat, pf, ld] = await Promise.all([puxar("/catalogo"), puxar("/plataforma"), puxar("/landing")]);
+    // Carol nov/09: a página abre com a última versão guardada no navegador e
+    // atualiza quando a resposta do app chega — o banner não espera a rede.
+    function pintar(cat, pf, ld) {
       estado.modulos = cat?.modulos || [];
       estado.regrasUsuarios = cat?.regrasUsuarios || null;
       estado.plataforma = pf?.config || {};
       estado.landing = ld?.config || {};
-      // Só no rascunho: ?exemplo=1 mostra textos de exemplo nos campos ainda vazios
       if (new URLSearchParams(location.search).has("exemplo") && window.EXEMPLO) window.EXEMPLO(estado);
       renderPlataforma();
       renderLanding();
       renderCatalogo();
       renderSimulador();
       aplicarWhatsapp();
+    }
+    try {
+      const c = JSON.parse(localStorage.getItem("flowpbr:cache") || "null");
+      if (c && c.cat) pintar(c.cat, c.pf, c.ld);
+    } catch {}
+    (async () => {
+      const [cat, pf, ld] = await Promise.all([puxar("/catalogo"), puxar("/plataforma"), puxar("/landing")]);
+      if (cat) { try { localStorage.setItem("flowpbr:cache", JSON.stringify({ cat, pf, ld, em: Date.now() })); } catch {} }
+      if (!cat) return; // falhou a rede: fica o que já está na tela
+      pintar(cat, pf, ld);
     })();
   </script>
 </body>
