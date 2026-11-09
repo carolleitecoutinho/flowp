@@ -995,6 +995,17 @@
       if (sim.sel.length) location.href = urlTestar();
       else document.getElementById("simulador").scrollIntoView({ behavior: "smooth" });
     });
+    // Carol nov/09: o balão do "i" era cortado pelo card do resumo (que rola).
+    // Abre "solto" na tela, preso ao "i" e sempre dentro da janela.
+    document.addEventListener("toggle", (e) => {
+      const d = e.target;
+      if (!(d instanceof HTMLDetailsElement) || !d.classList.contains("sim-info") || !d.open) return;
+      const pop = d.querySelector(":scope > div");
+      const r = d.querySelector("summary").getBoundingClientRect();
+      const w = Math.min(260, innerWidth - 16);
+      Object.assign(pop.style, { position: "fixed", top: `${Math.min(r.bottom + 6, innerHeight - 160)}px`, left: `${Math.max(8, Math.min(r.left - w / 2 + 9, innerWidth - w - 8))}px`, width: `${w}px`, transform: "none", zIndex: "120" });
+    }, true);
+    addEventListener("scroll", () => document.querySelectorAll("details.sim-info[open]").forEach((d) => (d.open = false)), { passive: true, capture: true });
     document.addEventListener("click", (e) => {
       document.querySelectorAll("details.sim-info[open]").forEach((d) => { if (!d.contains(e.target)) d.open = false; });
     });
