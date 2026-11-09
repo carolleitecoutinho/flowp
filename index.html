@@ -181,6 +181,7 @@
                   <button type="button" id="sim-mais" aria-label="Mais usuários" class="h-10 w-10 rounded-lg border border-fp-border bg-white text-lg font-bold text-fp-ink hover:border-fp-green">+</button>
                 </div>
               </div>
+              <p id="sim-nota-usuarios" class="hidden mt-2 rounded-lg border border-[#c9d9fb] bg-[#eef4ff] px-3 py-2 text-[12.5px] leading-snug text-[#1f4fae]"></p>
               <div id="sim-qtds" class="mt-3 space-y-3"></div>
             </div>
             <!-- Carol nov/08: não é forma de pagamento, é a oferta do anual -->
@@ -715,7 +716,7 @@
     // ─── Simulador de plano (Carol nov/08) ───
     // Mesma conta do app (src/lib/plataforma/regua-cobranca.ts + plano-personalizado.ts).
     const ORDEM_SETORES = ["Vendas e CRM", "Atendimento", "Marketing", "Tarefas e organização", "Financeiro", "Operação", "Qualidade e manutenção", "RH", "Condomínio", "Plataforma"];
-    const sim = { busca: "", sel: [], setor: "todos", usuarios: 0, anual: false, qtd: {}, numeros: 1, contasIg: 1 }; // usuarios 0 = ainda não mexeu (vale o que o plano inclui)
+    const sim = { busca: "", sel: [], setor: "todos", usuarios: 0, anual: false, qtd: {}, numeros: 1, contasIg: 1, pacoteGb: 0, pacoteCred: null }; // usuarios 0 = ainda não mexeu (vale o que o plano inclui)
     // Carol nov/08: módulo com limite (leads, produtos, números) — a pessoa já escolhe quanto quer.
     const METRICAS = {
       lead: { rotulo: "Leads", ajuda: "Contatos no CRM. O plano já vem com uma quantidade; acima disso o preço sobe por faixa." },
@@ -760,6 +761,18 @@
       return { ...melhor, valor: Math.round(melhor.valor * 100) / 100 };
     }
     const fmtN = (n) => Number(n).toLocaleString("pt-BR");
+    // Complementos (mesma conta de src/lib/plataforma/complementos.ts no app): progressivo, nunca cai ao aumentar.
+    const COMP_PADRAO = { whatsapp: { degraus: [{ aPartirDe: 3, descontoPct: 10 }, { aPartirDe: 10, descontoPct: 20 }] }, instagram: { degraus: [{ aPartirDe: 3, preco: 69.9 }] }, armazenamento: { base: [{ ateReais: 59.9, gb: 2 }, { ateReais: 149.9, gb: 5 }, { ateReais: null, gb: 10 }], pacotes: [{ gb: 10, preco: 19.9 }, { gb: 50, preco: 69.9 }, { gb: 200, preco: 199.9 }] } };
+    const comp = () => estado.complementos || COMP_PADRAO;
+    function progressivo(qtd, precoDa) {
+      const faixas = []; let total = 0;
+      for (let i = 1; i <= qtd; i++) { const u = Math.round(precoDa(i) * 100) / 100; total += u; const ult = faixas[faixas.length - 1]; if (ult && ult.unit === u) ult.qtd++; else faixas.push({ qtd: 1, unit: u }); }
+      return { total: Math.round(total * 100) / 100, faixas };
+    }
+    const txtFaixas = (f) => f.map((x) => `${x.qtd} × ${fmtMoeda(x.unit)}`).join(" + ");
+    const descWa = (i) => { let d = 0; for (const g of comp().whatsapp.degraus) if (i >= g.aPartirDe) d = g.descontoPct; return d; };
+    const precoIgDa = (total, precoConta) => { let u = precoConta; for (const g of comp().instagram.degraus) if (total >= g.aPartirDe) u = g.preco; return u; };
+    const gbDe = (preco) => { for (const f of comp().armazenamento.base) if (f.ateReais == null || preco <= f.ateReais) return f.gb; return 0; };
     function calcSim() {
       const escolhidos = sim.sel.map((x) => estado.modulos.find((m) => m.slug === x)).filter(Boolean);
       const regras = estado.regrasUsuarios;
@@ -794,13 +807,16 @@
           v = precoRegua(precoBase(m), r, r.incluidos);
         }
         if (m.porNumero && !(r && r.metrica === "numero")) {
-          v = Math.round(precoBase(m) * Math.max(1, sim.numeros) * 100) / 100;
-          sub = `${sim.numeros} número${sim.numeros > 1 ? "s" : ""} × ${fmtMoeda(precoBase(m))}`;
+          const w = progressivo(Math.max(1, sim.numeros), (i) => precoBase(m) * (1 - descWa(i) / 100));
+          v = w.total;
+          sub = txtFaixas(w.faixas);
         }
         return { texto: m.nome, sub, valor: v };
       });
       // Usuários: vale o MAIOR entre os módulos (não soma). Créditos: SOMAM.
-      const creditos = escolhidos.reduce((t, m) => t + (m.creditosIAInclusos || 0) * fatorNum(m), 0);
+      const creditosModulos = escolhidos.reduce((t, m) => t + (m.creditosIAInclusos || 0) * fatorNum(m), 0);
+      const pacC = (estado.pacotesCreditos || []).find((p) => p.slug === sim.pacoteCred) || null;
+      const creditos = creditosModulos + (pacC ? pacC.creditos : 0);
       const extras = escolhidos.length && !porReguaUsuario ? Math.max(0, uEf - inclusos) : 0;
       if (extras > 0 && regras) {
         const c = custoExtras(extras, regras);
@@ -812,16 +828,24 @@
       }
       if (temIg && sim.contasIg > 1 && precoIg > 0) {
         const ex = sim.contasIg - 1;
-        linhas.push({ texto: `+${ex} conta${ex > 1 ? "s" : ""} de Instagram`, sub: `além da 1 do plano · ${ex} × ${fmtMoeda(precoIg)}`, valor: Math.round(ex * precoIg * 100) / 100 });
+        const ig = progressivo(ex, (j) => precoIgDa(j + 1, precoIg));
+        linhas.push({ texto: `+${ex} conta${ex > 1 ? "s" : ""} de Instagram`, sub: `além da 1 do plano · ${txtFaixas(ig.faixas)}`, valor: ig.total });
       }
+      // Armazenamento: base pelo MAIOR módulo (não soma) + pacote. Créditos: pacote a mais.
+      const gbIncluso = escolhidos.length ? Math.max(0, ...escolhidos.map((m) => (precoBase(m) > 0 ? gbDe(precoBase(m)) : 0))) : 0;
+      const pacArm = comp().armazenamento.pacotes.find((p) => p.gb === sim.pacoteGb) || null;
+      if (escolhidos.length && pacArm) linhas.push({ texto: `+${pacArm.gb} GB de armazenamento`, valor: pacArm.preco });
+      if (escolhidos.length && pacC) linhas.push({ texto: `+${fmtN(pacC.creditos)} créditos de IA por mês`, valor: pacC.preco });
       const total = Math.round(linhas.reduce((t, l) => t + l.valor, 0) * 100) / 100;
-      return { escolhidos, linhas, total, anual: Math.round(total * 10 * 100) / 100, inclusos, creditos, metricas, uEf, temWa, temIg, precoIg };
+      return { escolhidos, linhas, total, anual: Math.round(total * 10 * 100) / 100, inclusos, creditos, creditosModulos, pacC, gbIncluso, pacArm, metricas, uEf, temWa, temIg, precoIg };
     }
     function urlTestar() {
       const qs = new URLSearchParams({ modulos: sim.sel.join(","), usuarios: String(calcSim().uEf) });
       if (sim.anual) qs.set("anual", "1");
       if (sim.numeros > 1) qs.set("numeros", String(sim.numeros));
       if (sim.contasIg > 1) qs.set("instagram", String(sim.contasIg));
+      if (sim.pacoteGb) qs.set("armazenamento", String(sim.pacoteGb));
+      if (sim.pacoteCred) qs.set("creditos", sim.pacoteCred);
       return `${APP_BASE}/cadastro?${qs.toString()}`;
     }
     function renderSimulador() {
@@ -914,6 +938,11 @@
       // Carol nov/09: no anual, o número grande é o que ela paga (à vista).
       document.getElementById("sim-total").textContent = fmtMoeda(sim.anual && n ? c.anual : c.total);
       document.getElementById("sim-total-rotulo").textContent = sim.anual && n ? "Anual à vista" : "Por mês";
+      const notaU = document.getElementById("sim-nota-usuarios");
+      notaU.classList.toggle("hidden", !n);
+      notaU.innerHTML = c.uEf > c.inclusos
+        ? `Os módulos já incluem <b>${c.inclusos} usuários</b>. Você está pedindo <b>${c.uEf - c.inclusos} a mais</b>, que entram no preço.`
+        : `Os módulos que você escolheu já incluem <b>${c.inclusos} usuários</b>. Não precisa usar todos: ter menos não diminui o preço. Precisa de mais? Use o +.`;
       document.getElementById("sim-anual-linha").classList.toggle("hidden", !sim.anual);
       document.querySelectorAll(".sim-opc").forEach((b) => {
         const on = (b.dataset.anual === "1") === sim.anual;
@@ -931,11 +960,13 @@
       const inc = document.getElementById("sim-inclui");
       inc.classList.toggle("hidden", !n);
       const mini = (alvo, valor, passo) => `<div class="flex items-center gap-1"><button type="button" data-ajuste="${alvo}" data-delta="-${passo}" aria-label="Menos" class="h-7 w-7 rounded-md border border-fp-border bg-white font-bold text-fp-ink hover:border-fp-green">−</button><b class="min-w-[56px] text-center text-fp-ink tabular-nums">${fmtN(valor)}</b><button type="button" data-ajuste="${alvo}" data-delta="${passo}" aria-label="Mais" class="h-7 w-7 rounded-md border border-fp-border bg-white font-bold text-fp-ink hover:border-fp-green">+</button></div>`;
+      const verPac = (k) => `<button type="button" data-pacotes="${k}" class="-mt-1 mb-1 text-[12.5px] font-semibold text-fp-green-dark underline underline-offset-2">Ver pacotes</button>`;
       const linha = (rotulo, i, sub, dir) => `<div class="flex items-center justify-between gap-3 py-1.5"><span class="min-w-0"><span class="flex items-center gap-1.5 text-fp-graphite">${rotulo}${i}</span>${sub ? `<span class="block text-[12px] text-fp-mute">${sub}</span>` : ""}</span>${dir}</div>`;
       if (n) {
         const rows = [`<div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-fp-mute">O plano inclui</div>`];
         rows.push(linha("Usuários", `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">Os usuários <b>não somam</b>: vale o módulo que dá mais usuários. Ex.: um módulo com 3 e outro com 5 = 5 pessoas. Precisa de mais? Use o + e cada pessoa a mais entra no preço.</div></details>`,
           c.uEf > c.inclusos ? `${c.inclusos} no plano + ${c.uEf - c.inclusos} a mais` : `${c.inclusos} no plano`, mini("usuario", c.uEf, 1)));
+        rows.push(verPac("usuarios"));
         for (const [k, mt] of Object.entries(c.metricas)) {
           if (k === "numero" && c.temWa) continue;
           const passo = Math.max(1, ...c.escolhidos.filter((m) => m.regua?.metrica === k).map((m) => m.regua.aCada || 1));
@@ -943,8 +974,13 @@
             mt.escolhido > mt.incluidos ? `${fmtN(mt.incluidos)} no plano + ${fmtN(mt.escolhido - mt.incluidos)} a mais` : `${fmtN(mt.incluidos)} no plano`, mini(k, mt.escolhido, passo)));
         }
         if (c.temWa) rows.push(linha("Números de WhatsApp", `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">O WhatsApp é cobrado por número conectado. Cada número traz os usuários e os créditos de IA do módulo.</div></details>`, "preço, usuários e créditos por número", mini("wa", sim.numeros, 1)));
+        if (c.temWa) rows.push(verPac("whatsapp"));
         if (c.temIg) rows.push(linha("Contas de Instagram", `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">O módulo já vem com 1 conta de Instagram. Cada conta a mais custa ${fmtMoeda(c.precoIg || 80)} por mês.</div></details>`, sim.contasIg > 1 ? `1 no plano + ${sim.contasIg - 1} a mais` : "1 no plano", mini("ig", sim.contasIg, 1)));
-        rows.push(linha("Créditos de IA por mês", `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">Os créditos <b>somam</b>: cada módulo traz os seus e o total vira a franquia do mês. Eles pagam o uso da IA (agentes, resumos, sugestões) e renovam todo mês.</div></details>`, "", `<b class="text-fp-ink tabular-nums">${c.creditos ? fmtN(c.creditos) : "—"}</b>`));
+        if (c.temIg) rows.push(verPac("instagram"));
+        rows.push(linha("Créditos de IA por mês", `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">Os créditos <b>somam</b>: cada módulo traz os seus e o total vira a franquia do mês. Eles pagam o uso da IA (agentes, resumos, sugestões) e renovam todo mês.</div></details>`, c.pacC ? `${fmtN(c.creditosModulos)} no plano + ${fmtN(c.pacC.creditos)} do pacote` : "", `<b class="text-fp-ink tabular-nums">${c.creditos ? fmtN(c.creditos) : "—"}</b>`));
+        if ((estado.pacotesCreditos || []).length) rows.push(verPac("creditos"));
+        rows.push(linha("Armazenamento", "", c.pacArm ? `${c.gbIncluso} GB no plano + ${c.pacArm.gb} GB do pacote` : `${c.gbIncluso} GB no plano`, `<b class="text-fp-ink tabular-nums">${c.gbIncluso + (c.pacArm ? c.pacArm.gb : 0)} GB</b>`));
+        rows.push(verPac("armazenamento"));
         inc.innerHTML = rows.join("");
       }
       document.getElementById("sim-testar").disabled = !n;
@@ -1023,6 +1059,56 @@
       if (sim.sel.length) location.href = urlTestar();
       else document.getElementById("simulador").scrollIntoView({ behavior: "smooth" });
     });
+    // Carol nov/09: "Ver pacotes" — mesmos degraus do app, com % de desconto.
+    function abrirPacotes(k) {
+      const c = calcSim();
+      const C = comp();
+      let titulo = "", explica = "", rows = [];
+      const desc = (u, u0) => (u0 > 0 ? Math.max(0, Math.round((1 - u / u0) * 100)) : 0);
+      if (k === "usuarios") {
+        const d = (estado.regrasUsuarios && estado.regrasUsuarios.degraus) || [];
+        titulo = "Pacotes de usuários"; explica = "Preço de cada usuário extra. Quanto mais, menor o preço do próximo: o total nunca cai quando você aumenta.";
+        rows = d.map((x, i) => ({ r: d[i + 1] ? `${x.aPartirDe}º ao ${d[i + 1].aPartirDe - 1}º usuário extra` : `${x.aPartirDe}º usuário extra em diante`, p: x.preco, off: desc(x.preco, d[0]?.preco) }));
+      } else if (k === "whatsapp") {
+        const m = c.escolhidos.find((x) => x.porNumero); const base = m ? precoBase(m) : 0;
+        const d = [{ aPartirDe: 1, descontoPct: 0 }, ...C.whatsapp.degraus];
+        titulo = "Números de WhatsApp"; explica = "Preço de cada número. A partir do 3º e do 10º número, cada um sai com desconto.";
+        rows = d.map((x, i) => ({ r: d[i + 1] ? `${x.aPartirDe}º ao ${d[i + 1].aPartirDe - 1}º número` : `${x.aPartirDe}º número em diante`, p: base * (1 - x.descontoPct / 100), off: x.descontoPct }));
+      } else if (k === "instagram") {
+        const d = [{ aPartirDe: 2, preco: c.precoIg || 80 }, ...C.instagram.degraus];
+        titulo = "Contas de Instagram"; explica = "A 1ª conta vem no módulo. Preço de cada conta a mais:";
+        rows = d.map((x, i) => ({ r: d[i + 1] ? `${x.aPartirDe}ª à ${d[i + 1].aPartirDe - 1}ª conta` : `${x.aPartirDe}ª conta em diante`, p: x.preco, off: desc(x.preco, d[0].preco) }));
+      } else if (k === "creditos") {
+        const L = estado.pacotesCreditos || [];
+        titulo = "Pacotes de créditos de IA"; explica = "Somam aos créditos dos módulos e renovam todo mês. Escolha um pacote:";
+        rows = L.map((x) => ({ r: `+${fmtN(x.creditos)} créditos`, p: x.preco, off: desc(x.preco / x.creditos, L[0].preco / L[0].creditos), esc: x.slug, on: sim.pacoteCred === x.slug }));
+      } else {
+        const L = C.armazenamento.pacotes;
+        titulo = "Pacotes de armazenamento"; explica = "Somam ao espaço que o plano já inclui. Escolha um pacote:";
+        rows = L.map((x) => ({ r: `+${x.gb} GB`, p: x.preco, off: desc(x.preco / x.gb, L[0].preco / L[0].gb), esc: String(x.gb), on: sim.pacoteGb === x.gb }));
+      }
+      let el = document.getElementById("sim-pacotes");
+      if (!el) { el = document.createElement("div"); el.id = "sim-pacotes"; document.body.appendChild(el); }
+      el.innerHTML = `<div class="fixed inset-0 z-[110] flex items-center justify-center bg-[rgba(15,28,46,.55)] p-3" data-fechar-pac>
+        <div class="w-full max-w-[420px] rounded-2xl bg-white p-5 shadow-2xl" role="dialog" aria-modal="true" aria-label="${esc(titulo)}">
+          <div class="mb-1 flex items-start justify-between gap-3"><h3 class="text-[17px] font-extrabold text-fp-ink">${esc(titulo)}</h3><button type="button" data-fechar-pac class="rounded-lg p-1.5 text-fp-mute hover:bg-fp-bg" aria-label="Fechar">✕</button></div>
+          <p class="mb-3 text-[13px] leading-snug text-fp-graphite">${esc(explica)}</p>
+          <div class="overflow-hidden rounded-xl border border-fp-border">${rows.map((x, i) => `<div class="flex items-center justify-between gap-3 px-3 py-2.5 text-[13.5px] ${x.on ? "bg-fp-green-soft" : i % 2 ? "bg-fp-bg" : ""}"><span class="font-semibold text-fp-ink">${esc(x.r)}</span><span class="flex shrink-0 items-center gap-2 tabular-nums"><b class="text-fp-ink">${fmtMoeda(Math.round(x.p * 100) / 100)}</b>${x.off > 0 ? `<span class="rounded-full bg-fp-green-soft px-1.5 py-0.5 text-[11px] font-bold text-fp-green-dark">−${x.off}%</span>` : ""}${x.esc != null ? `<button type="button" data-escolher-pac="${k}:${esc(x.esc)}" class="rounded-lg px-2.5 py-1 text-[12px] font-bold ${x.on ? "bg-fp-green-dark text-white" : "border border-fp-border text-fp-ink"}">${x.on ? "Escolhido" : "Escolher"}</button>` : ""}</span></div>`).join("")}</div>
+        </div></div>`;
+    }
+    document.addEventListener("click", (e) => {
+      const ab = e.target.closest("[data-pacotes]");
+      if (ab) { abrirPacotes(ab.dataset.pacotes); return; }
+      const es = e.target.closest("[data-escolher-pac]");
+      if (es) {
+        const [k, v] = es.dataset.escolherPac.split(":");
+        if (k === "creditos") sim.pacoteCred = sim.pacoteCred === v ? null : v;
+        else sim.pacoteGb = sim.pacoteGb === Number(v) ? 0 : Number(v);
+        atualizarResumo(); abrirPacotes(k); return;
+      }
+      const f = e.target.closest("[data-fechar-pac]");
+      if (f && (e.target === f || e.target.closest("button[data-fechar-pac]"))) document.getElementById("sim-pacotes").innerHTML = "";
+    });
     // Carol nov/09: o balão do "i" era cortado pelo card do resumo (que rola).
     // Abre "solto" na tela, preso ao "i" e sempre dentro da janela.
     document.addEventListener("toggle", (e) => {
@@ -1056,6 +1142,8 @@
     function pintar(cat, pf, ld) {
       estado.modulos = cat?.modulos || [];
       estado.regrasUsuarios = cat?.regrasUsuarios || null;
+      estado.complementos = cat?.complementos || null;
+      estado.pacotesCreditos = cat?.pacotesCreditos || [];
       estado.plataforma = pf?.config || {};
       estado.landing = ld?.config || {};
       if (new URLSearchParams(location.search).has("exemplo") && window.EXEMPLO) window.EXEMPLO(estado);
