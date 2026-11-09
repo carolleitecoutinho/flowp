@@ -174,7 +174,7 @@
                 <span class="text-[14px] font-semibold text-fp-graphite">Usuários</span>
                 <div class="flex items-center gap-1.5">
                   <button type="button" id="sim-menos" aria-label="Menos usuários" class="h-10 w-10 rounded-lg border border-fp-border bg-white text-lg font-bold text-fp-ink hover:border-fp-green">−</button>
-                  <input id="sim-usuarios" inputmode="numeric" aria-label="Usuários" value="3" class="h-10 w-16 rounded-lg border border-fp-border bg-white text-center text-[15px] font-bold text-fp-ink outline-none focus:border-fp-green" />
+                  <input id="sim-usuarios" inputmode="numeric" aria-label="Usuários" value="" class="h-10 w-16 rounded-lg border border-fp-border bg-white text-center text-[15px] font-bold text-fp-ink outline-none focus:border-fp-green" />
                   <button type="button" id="sim-mais" aria-label="Mais usuários" class="h-10 w-10 rounded-lg border border-fp-border bg-white text-lg font-bold text-fp-ink hover:border-fp-green">+</button>
                 </div>
               </div>
@@ -208,10 +208,10 @@
             <div id="sim-linhas" class="space-y-2.5 text-[14px]"></div>
             <div id="sim-inclui" class="hidden rounded-xl border border-fp-border px-4 py-3 text-[14px]"></div>
             <div class="rounded-xl bg-fp-bg px-4 py-3">
-              <div class="flex items-baseline justify-between gap-3"><span class="text-[13px] font-semibold text-fp-mute">Por mês</span><b id="sim-total" class="text-[30px] font-extrabold leading-none tracking-tight text-fp-ink tabular-nums">R$ 0</b></div>
+              <div class="flex items-baseline justify-between gap-3"><span id="sim-total-rotulo" class="text-[13px] font-semibold text-fp-mute">Por mês</span><b id="sim-total" class="text-[30px] font-extrabold leading-none tracking-tight text-fp-ink tabular-nums">R$ 0</b></div>
               <div id="sim-anual-linha" class="hidden mt-3 space-y-1.5 border-t border-fp-border pt-3 text-[13px]">
                 <div class="flex items-baseline justify-between gap-3"><span class="text-fp-mute">12 meses no mensal</span><s id="sim-total-12" class="text-fp-mute tabular-nums"></s></div>
-                <div class="flex items-baseline justify-between gap-3"><span class="min-w-0"><span class="block font-semibold text-fp-ink">Anual à vista</span><span id="sim-equivale" class="block text-[12px] text-fp-mute"></span></span><b id="sim-total-anual" class="text-[16px] text-fp-ink tabular-nums"></b></div>
+                <div class="flex items-baseline justify-between gap-3"><span class="font-semibold text-fp-ink">Equivale por mês</span><b id="sim-equivale" class="text-[15px] text-fp-ink tabular-nums"></b></div><b id="sim-total-anual" class="hidden"></b>
                 <div class="flex items-baseline justify-between gap-3 rounded-lg bg-fp-green-soft px-2.5 py-1.5 font-bold text-fp-green-dark"><span>Você economiza</span><span id="sim-economia-valor" class="tabular-nums"></span></div>
               </div>
             </div>
@@ -695,7 +695,7 @@
     // ─── Simulador de plano (Carol nov/08) ───
     // Mesma conta do app (src/lib/plataforma/regua-cobranca.ts + plano-personalizado.ts).
     const ORDEM_SETORES = ["Vendas e CRM", "Atendimento", "Marketing", "Tarefas e organização", "Financeiro", "Operação", "Qualidade e manutenção", "RH", "Condomínio", "Plataforma"];
-    const sim = { busca: "", sel: [], setor: "todos", usuarios: 3, anual: false, qtd: {} };
+    const sim = { busca: "", sel: [], setor: "todos", usuarios: 0, anual: false, qtd: {} }; // usuarios 0 = ainda não mexeu (vale o que o plano inclui)
     // Carol nov/08: módulo com limite (leads, produtos, números) — a pessoa já escolhe quanto quer.
     const METRICAS = {
       lead: { rotulo: "Leads", ajuda: "Contatos no CRM. O plano já vem com uma quantidade; acima disso o preço sobe por faixa." },
@@ -733,13 +733,17 @@
       const regras = estado.regrasUsuarios;
       let porReguaUsuario = false;
       const metricas = {}; // lead/produto/numero: incluso (o maior) e escolhido
+      // Usuários: vale o MAIOR entre os módulos (não soma); o contador nunca fica abaixo disso.
+      const padraoU = regras?.inclusosPadrao ?? 3;
+      const inclusos = escolhidos.length ? Math.max(...escolhidos.map((m) => (typeof m.usuariosInclusos === "number" ? m.usuariosInclusos : padraoU))) : 0;
+      const uEf = Math.max(sim.usuarios, inclusos, 1);
       const linhas = escolhidos.map((m) => {
         const r = m.regua;
         let v = precoBase(m), sub = "";
         if (r && r.metrica === "usuario") {
           porReguaUsuario = true;
           if (r.usuarioIlimitadoComOutroModulo && escolhidos.length > 1) sub = "usuários ilimitados";
-          else v = precoRegua(precoBase(m), r, sim.usuarios);
+          else v = precoRegua(precoBase(m), r, uEf);
         } else if (r && METRICAS[r.metrica]) {
           const q = sim.qtd[r.metrica] ?? r.incluidos;
           v = precoRegua(precoBase(m), r, q);
@@ -754,10 +758,8 @@
         return { texto: m.nome, sub, valor: v };
       });
       // Usuários: vale o MAIOR entre os módulos (não soma). Créditos: SOMAM.
-      const padrao = regras?.inclusosPadrao ?? 3;
-      const inclusos = escolhidos.length ? Math.max(...escolhidos.map((m) => (typeof m.usuariosInclusos === "number" ? m.usuariosInclusos : padrao))) : 0;
       const creditos = escolhidos.reduce((t, m) => t + (m.creditosIAInclusos || 0), 0);
-      const extras = escolhidos.length && !porReguaUsuario ? Math.max(0, sim.usuarios - inclusos) : 0;
+      const extras = escolhidos.length && !porReguaUsuario ? Math.max(0, uEf - inclusos) : 0;
       if (extras > 0 && regras) {
         const c = custoExtras(extras, regras);
         const partes = [];
@@ -766,10 +768,10 @@
         linhas.push({ texto: `+${extras} usuário${extras > 1 ? "s" : ""}`, sub: `além dos ${inclusos} do plano · ${partes.join(" + ")}`, valor: c.valor });
       }
       const total = Math.round(linhas.reduce((t, l) => t + l.valor, 0) * 100) / 100;
-      return { escolhidos, linhas, total, anual: Math.round(total * 10 * 100) / 100, inclusos, creditos, metricas };
+      return { escolhidos, linhas, total, anual: Math.round(total * 10 * 100) / 100, inclusos, creditos, metricas, uEf };
     }
     function urlTestar() {
-      const qs = new URLSearchParams({ modulos: sim.sel.join(","), usuarios: String(sim.usuarios) });
+      const qs = new URLSearchParams({ modulos: sim.sel.join(","), usuarios: String(calcSim().uEf) });
       if (sim.anual) qs.set("anual", "1");
       return `${APP_BASE}/cadastro?${qs.toString()}`;
     }
@@ -844,7 +846,9 @@
       document.getElementById("sim-linhas").innerHTML = n
         ? c.linhas.map((l) => `<div class="flex justify-between gap-3"><span class="min-w-0"><span class="block font-semibold text-fp-ink">${esc(l.texto)}</span>${l.sub ? `<span class="mt-0.5 block border-l-2 border-fp-border pl-2.5 text-[12.5px] leading-snug text-fp-mute">${esc(l.sub)}</span>` : ""}</span><span class="shrink-0 font-semibold text-fp-ink tabular-nums">${fmtMoeda(l.valor)}</span></div>`).join("")
         : '<div class="rounded-xl border border-dashed border-fp-border px-3 py-5 text-center text-fp-mute">Marque os módulos e o preço aparece aqui.</div>';
-      document.getElementById("sim-total").textContent = fmtMoeda(c.total);
+      // Carol nov/09: no anual, o número grande é o que ela paga (à vista).
+      document.getElementById("sim-total").textContent = fmtMoeda(sim.anual && n ? c.anual : c.total);
+      document.getElementById("sim-total-rotulo").textContent = sim.anual && n ? "Anual à vista" : "Por mês";
       document.getElementById("sim-anual-linha").classList.toggle("hidden", !sim.anual);
       document.querySelectorAll(".sim-opc").forEach((b) => {
         const on = (b.dataset.anual === "1") === sim.anual;
@@ -857,7 +861,7 @@
       document.getElementById("sim-economia").textContent = !n ? "Assine o anual e ganhe 2 meses grátis" : sim.anual ? `Você economiza ${fmtMoeda(eco)} por ano` : `No anual você economiza ${fmtMoeda(eco)}`;
       document.getElementById("sim-total-anual").textContent = fmtMoeda(c.anual);
       document.getElementById("sim-total-12").textContent = fmtMoeda(Math.round(c.total * 12 * 100) / 100);
-      document.getElementById("sim-equivale").textContent = `equivale a ${fmtMoeda(Math.round((c.anual / 12) * 100) / 100)}/mês`;
+      document.getElementById("sim-equivale").textContent = fmtMoeda(Math.round((c.anual / 12) * 100) / 100);
       document.getElementById("sim-economia-valor").textContent = fmtMoeda(Math.round(c.total * 2 * 100) / 100);
       const inc = document.getElementById("sim-inclui");
       inc.classList.toggle("hidden", !n);
@@ -866,7 +870,7 @@
       if (n) {
         const rows = [`<div class="mb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-fp-mute">O plano inclui</div>`];
         rows.push(linha("Usuários", `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">Os usuários <b>não somam</b>: vale o módulo que dá mais usuários. Ex.: um módulo com 3 e outro com 5 = 5 pessoas. Precisa de mais? Use o + e cada pessoa a mais entra no preço.</div></details>`,
-          sim.usuarios > c.inclusos ? `${c.inclusos} no plano + ${sim.usuarios - c.inclusos} a mais` : `${c.inclusos} no plano`, mini("usuario", sim.usuarios, 1)));
+          c.uEf > c.inclusos ? `${c.inclusos} no plano + ${c.uEf - c.inclusos} a mais` : `${c.inclusos} no plano`, mini("usuario", c.uEf, 1)));
         for (const [k, mt] of Object.entries(c.metricas)) {
           const passo = Math.max(1, ...c.escolhidos.filter((m) => m.regua?.metrica === k).map((m) => m.regua.aCada || 1));
           rows.push(linha(METRICAS[k].rotulo, `<details class="sim-info relative"><summary aria-label="Explicação" class="list-none cursor-pointer flex h-[18px] w-[18px] items-center justify-center rounded-full border border-fp-border text-[11px] font-bold text-fp-mute hover:border-fp-green hover:text-fp-green-dark">i</summary><div class="absolute left-1/2 -translate-x-1/2 z-30 mt-2 w-[250px] max-w-[80vw] rounded-xl border border-fp-border bg-white p-3 text-[13px] font-normal leading-snug text-fp-graphite shadow-lg">${METRICAS[k].ajuda} Use o + pra já contratar mais.</div></details>`,
@@ -876,13 +880,13 @@
         inc.innerHTML = rows.join("");
       }
       document.getElementById("sim-testar").disabled = !n;
-      document.getElementById("sim-barra-sub").textContent = n ? `${n} ${n === 1 ? "módulo" : "módulos"} · ${sim.usuarios} usuário${sim.usuarios > 1 ? "s" : ""} · por mês` : "Nenhum módulo";
-      document.getElementById("sim-barra-total").textContent = fmtMoeda(c.total);
+      document.getElementById("sim-barra-sub").textContent = n ? `${n} ${n === 1 ? "módulo" : "módulos"} · ${c.uEf} usuário${c.uEf > 1 ? "s" : ""} · ${sim.anual ? "anual à vista" : "por mês"}` : "Nenhum módulo";
+      document.getElementById("sim-usuarios").value = n ? c.uEf : "";
+      document.getElementById("sim-barra-total").textContent = fmtMoeda(sim.anual && n ? c.anual : c.total);
       document.getElementById("sim-barra-btn").textContent = n ? "Testar agora" : "Montar plano";
     }
     function setUsuarios(v) {
       sim.usuarios = Math.max(1, Math.min(500, Math.floor(Number(v) || 1)));
-      document.getElementById("sim-usuarios").value = sim.usuarios;
       atualizarResumo();
     }
     document.getElementById("sim-setores").addEventListener("click", (e) => {
@@ -918,13 +922,13 @@
       renderSimulador();
     });
     document.getElementById("sim-limpar").addEventListener("click", () => { sim.sel = []; renderSimulador(); });
-    document.getElementById("sim-menos").addEventListener("click", () => setUsuarios(sim.usuarios - 1));
-    document.getElementById("sim-mais").addEventListener("click", () => setUsuarios(sim.usuarios + 1));
-    document.getElementById("sim-usuarios").addEventListener("input", (e) => setUsuarios(e.target.value.replace(/\D/g, "")));
+    document.getElementById("sim-menos").addEventListener("click", () => setUsuarios(calcSim().uEf - 1));
+    document.getElementById("sim-mais").addEventListener("click", () => setUsuarios(calcSim().uEf + 1));
+    document.getElementById("sim-usuarios").addEventListener("change", (e) => setUsuarios(e.target.value.replace(/\D/g, "")));
     document.getElementById("sim-inclui").addEventListener("click", (e) => {
       const b = e.target.closest("[data-ajuste]"); if (!b) return;
       const k = b.dataset.ajuste, d = Number(b.dataset.delta);
-      if (k === "usuario") { setUsuarios(sim.usuarios + d); return; }
+      if (k === "usuario") { setUsuarios(calcSim().uEf + d); return; }
       sim.qtd[k] = Math.max(0, (sim.qtd[k] || 0) + d);
       const inp = document.querySelector(`[data-qtd-input="${k}"]`); if (inp) inp.value = sim.qtd[k];
       atualizarResumo();
