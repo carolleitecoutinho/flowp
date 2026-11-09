@@ -199,7 +199,7 @@
             </div>
           </div>
         </div>
-        <aside id="sim-resumo" class="min-w-0 lg:sticky lg:top-[84px] rounded-2xl border border-fp-border bg-white shadow-sm" style="scroll-margin-top: 80px">
+        <aside id="sim-resumo" class="min-w-0 lg:sticky lg:top-[84px] lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto lg:overscroll-contain rounded-2xl border border-fp-border bg-white shadow-sm" style="scroll-margin-top: 80px">
           <div class="bg-grad-dark rounded-t-2xl px-5 py-4 text-white">
             <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/60">Seu plano</div>
             <div id="sim-titulo" class="text-[17px] font-bold">Escolha seus módulos</div>
@@ -731,7 +731,9 @@
     function calcSim() {
       const escolhidos = sim.sel.map((x) => estado.modulos.find((m) => m.slug === x)).filter(Boolean);
       const regras = estado.regrasUsuarios;
-      let porReguaUsuario = false;
+      // Carol nov/09: módulo que cobra por usuário só "segura" os extras se estiver cobrando de verdade
+      // (o "ilimitado com outro módulo" não cobra usuário — aí o extra entra normal).
+      const porReguaUsuario = escolhidos.some((m) => m.regua?.metrica === "usuario" && !(m.regua.usuarioIlimitadoComOutroModulo && escolhidos.length > 1));
       const metricas = {}; // lead/produto/numero: incluso (o maior) e escolhido
       // Usuários: vale o MAIOR entre os módulos (não soma); o contador nunca fica abaixo disso.
       const padraoU = regras?.inclusosPadrao ?? 3;
@@ -741,7 +743,6 @@
         const r = m.regua;
         let v = precoBase(m), sub = "";
         if (r && r.metrica === "usuario") {
-          porReguaUsuario = true;
           if (r.usuarioIlimitadoComOutroModulo && escolhidos.length > 1) sub = "usuários ilimitados";
           else v = precoRegua(precoBase(m), r, uEf);
         } else if (r && METRICAS[r.metrica]) {
