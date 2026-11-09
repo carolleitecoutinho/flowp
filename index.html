@@ -68,7 +68,7 @@
     /* Carol out/14: no celular travava (fechar sumia atrás da barra do navegador e não sobrava fundo pra tocar). Centralizado, com folga e altura pela tela visível (dvh), igual ao modal de tarefa do app. */
     @media (max-width: 640px) { .modal-fundo { padding: 14px 10px; align-items: center; } .modal-caixa { max-height: 86vh; max-height: 86dvh; } }
     #modal-corpo { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-    .wa-float { position: fixed; right: 18px; bottom: 18px; z-index: 90; width: 58px; height: 58px; border-radius: 50%; background: #22C55E; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 28px rgba(22,163,74,.4); transition: transform .15s; }
+    .wa-float { position: fixed; right: 18px; bottom: 18px; z-index: 90; width: 58px; height: 58px; border-radius: 50%; background: #22C55E; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 28px rgba(22,163,74,.4); transition: transform .15s, bottom .2s; }
     .wa-float:hover { transform: scale(1.06); }
     body.modal-aberto .wa-float { display: none; }
   </style>
@@ -951,8 +951,13 @@
       document.querySelectorAll("details.sim-info[open]").forEach((d) => { if (!d.contains(e.target)) d.open = false; });
     });
     // Barra do celular só aparece enquanto o simulador está na tela.
-    new IntersectionObserver(([en]) => document.getElementById("sim-barra").classList.toggle("hidden", !en.isIntersecting))
-      .observe(document.getElementById("simulador"));
+    // Carol nov/09: o botão do WhatsApp cobria o "Testar agora" da barra; sobe junto com ela.
+    new IntersectionObserver(([en]) => {
+      const barra = document.getElementById("sim-barra");
+      barra.classList.toggle("hidden", !en.isIntersecting);
+      const wa = document.getElementById("wa-float");
+      if (wa) wa.style.bottom = en.isIntersecting && getComputedStyle(barra).display !== "none" ? `${barra.offsetHeight + 12}px` : "";
+    }).observe(document.getElementById("simulador"));
 
     // ─── Carga ───
     async function puxar(rota) {
